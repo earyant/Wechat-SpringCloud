@@ -1,0 +1,13 @@
+server:
+  port: 8761
+
+spring:
+  profiles: localhost
+eureka:
+  instance:
+    hostname: localhost
+    preferIpAddress: true  #相互感应，当有服务注册时，两个 Eureka-eserver 是对等的，它们都存有相同的信息
+
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8762/eureka/

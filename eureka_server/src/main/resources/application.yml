@@ -1,0 +1,49 @@
+server:
+  port: 8761
+
+eureka:
+  instance:
+    hostname: localhost
+    preferIpAddress: true #相互感应，当有服务注册时，两个 Eureka-eserver 是对等的，它们都存有相同的信息
+  client:
+    registerWithEureka: false
+    fetchRegistry: false
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+spring:
+  profiles:
+    active: peer1
+#docker
+
+#server:
+#  port: 8761
+#eureka:
+#  instance:
+#    prefer-ip-address: true
+#  client:
+#    registerWithEureka: false
+#    fetchRegistry: false
+
+
+---
+spring:
+  profiles: localhost # 指定profile=localhost
+server:
+  port: 8761
+eureka:
+  instance:
+    hostname: localhost # 指定当profile=localhost时，主机名
+  client:
+    serviceUrl:
+      defaultZone: http://peer2:8762/eureka/ # 将⾃⼰注册到peer2这个Eureka上⾯去
+---
+spring:
+  profiles: peer2
+server:
+  port: 8762
+eureka:
+  instance:
+    hostname: peer2
+  client:
+    serviceUrl:
+        defaultZone: http://localhost:8761/eureka/
