@@ -1,0 +1,102 @@
+#eureka:
+#  client:
+#    serviceUrl:
+#      defaultZone: http://localhost:8761/eureka/
+#server:
+#  port: 8763
+#spring:
+#  application:
+#    name: service-hi
+
+
+#docker化以后
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/  # 这个需要改为eureka-server
+server:
+  port: 8763
+#  context-path: /wechat-provider
+  connectionTimeout: 60000
+spring:
+  application:
+    name: wechat-provider
+  datasource:
+    url: jdbc:mysql://localhost:3306/wechat?amp&useOldAliasMetadataBehavior\=true&amp&zeroDateTimeBehavior\=convertToNull&serverTimezone=UTC&createDatabaseIfNotExist=true
+    username: root
+    password: 23769263
+    driver-class-name: com.mysql.jdbc.Driver
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQL5Dialect
+  redis:
+      host: 127.0.0.1
+      port: 6379
+  data:
+    mongodb:
+      authentication-database: wechat # Authentication database name.
+      database: wechat # Database name.
+
+#spring.data.mongodb.field-naming-strategy= # Fully qualified name of the FieldNamingStrategy to use.
+
+#spring.data.mongodb.grid-fs-database= # GridFS database name.
+      host: localhost # Mongo server host.
+#      password:  # Login password of the mongo server.
+      port: 27017 # Mongo server port.
+      repositories:
+        enabled: true # Enable Mongo repositories.
+#      uri: mongodb://localhost/wechat # Mongo database URI. When set, host and port are ignored.
+#      username:  # Login user of the mongo server.
+
+
+#
+#
+#spring:
+#    datasource:
+#      readSize: 1
+#        # 使用druid数据源
+#      type: com.alibaba.druid.pool.DruidDataSource
+#      write:
+#        url: jdbc:mysql://localhost:3306/wechat
+#        username: earyant
+#        password: 23769263
+#        driver-class-name: com.mysql.jdbc.Driver
+#        filters: stat,wall,logback
+#        maxActive: 20
+#        initialSize: 5
+#        maxWait: 60000
+#        minIdle: 5
+#        timeBetweenEvictionRunsMillis: 60000
+#        minEvictableIdleTimeMillis: 300000
+#        validationQuery: SELECT 1 FROM DUAL
+#        testWhileIdle: true
+#        testOnBorrow: false
+#        testOnReturn: false
+#        poolPreparedStatements: true
+#        maxOpenPreparedStatements: 20
+#      read:
+#        url: jdbc:mysql://localhost:3306/wechat?characterEncoding=utf8&useSSL=true
+#        username: earyant
+#        password: 23769263
+#        # 使用druid数据源
+#        type: com.alibaba.druid.pool.DruidDataSource
+#        driver-class-name: com.mysql.jdbc.Driver
+#        filters: stat,wall,logback
+#        maxActive: 20
+#        initialSize: 5
+#        maxWait: 60000
+#        minIdle: 5
+#        timeBetweenEvictionRunsMillis: 60000
+#        minEvictableIdleTimeMillis: 300000
+#        validationQuery: SELECT 1 FROM DUAL
+#        testWhileIdle: true
+#        testOnBorrow: false
+#        testOnReturn: false
+#        poolPreparedStatements: true
+#        maxOpenPreparedStatements: 20
+#      url: jdbc:mysql://localhost:3306/wechat?characterEncoding=utf8&useSSL=true
+#      username: earyant
+#      password: 23769263
