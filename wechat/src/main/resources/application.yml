@@ -1,0 +1,24 @@
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+server:
+  port: 8765
+  context-path: /wechat
+spring:
+  application:
+    name: WechatApplication
+
+ribbon:
+  eureka:
+    enabled: true
+
+#    # 默认为true。如果设置为false，Ribbon将
+#     不会从Eureka中获得服务列表，⽽是使⽤静态配置的服务列表。静态服务列表可使
+#     ⽤：<client>.ribbon.listOfServers来指定。参考：http://projects.s
+#     pring.io/spring-cloud/docs/1.0.3/spring-cloud.html#spring-clo
+#     ud-ribbon-without-eureka
+     ## 参考：https://spring.io/guides/gs/client-side-load-balanci
+#     ng/
