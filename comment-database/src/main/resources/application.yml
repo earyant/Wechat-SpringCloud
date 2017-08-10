@@ -1,0 +1,19 @@
+spring:
+  redis:
+        host:127.0.0.1
+        port:6379
+  data:
+      mongodb:
+        authentication-database: wechat # Authentication database name.
+        database: wechat # Database name.
+
+  #spring.data.mongodb.field-naming-strategy= # Fully qualified name of the FieldNamingStrategy to use.
+
+  #spring.data.mongodb.grid-fs-database= # GridFS database name.
+        host: localhost # Mongo server host.
+  #      password:  # Login password of the mongo server.
+        port: 27017 # Mongo server port.
+        repositories:
+          enabled: true # Enable Mongo repositories.
+        uri: mongodb://localhost/wechat # Mongo database URI. When set, host and port are ignored.
+  #      username:  # Login user of the mongo server.
