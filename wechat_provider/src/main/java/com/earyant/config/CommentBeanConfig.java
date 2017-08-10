@@ -15,6 +15,10 @@ public class CommentBeanConfig {
     @Bean
     @LoadBalanced
     RestTemplate restTemplate(){
+
+//        RestTemplate restTemplate =new RestTemplate();
+//        restTemplate.
+
         return  new RestTemplate();
     }
 
