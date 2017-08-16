@@ -3,11 +3,19 @@ package com.earyant.wechatitchat4jprovider.itchat4j.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.earyant.wechatitchat4jprovider.dao.GroupName;
 import com.earyant.wechatitchat4jprovider.dao.User;
-import com.earyant.wechatitchat4jprovider.dao.repository.UserRepository;
+import com.earyant.wechatitchat4jprovider.dao.bean.ContactListBean;
+import com.earyant.wechatitchat4jprovider.dao.bean.ListBean;
+import com.earyant.wechatitchat4jprovider.dao.bean.SyncKeyBean;
+import com.earyant.wechatitchat4jprovider.dao.bean.WXGetContact.GetContctBean;
+import com.earyant.wechatitchat4jprovider.dao.bean.WechatinitBean;
+import com.earyant.wechatitchat4jprovider.dao.repository.*;
+import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.beans.BaseMsg;
 import com.earyant.wechatitchat4jprovider.itchat4j.core.MsgCenter;
 import com.earyant.wechatitchat4jprovider.itchat4j.service.ILoginService;
+import com.earyant.wechatitchat4jprovider.itchat4j.utils.Config;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.MyHttpClient;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.SleepUtils;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.ResultEnum;
@@ -18,7 +26,9 @@ import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.parameters.LoginP
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.parameters.StatusNotifyParaEnum;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.parameters.UUIDParaEnum;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.tools.CommonTools;
+import com.earyant.wechatitchat4jprovider.utils.JSONUtils;
 import com.earyant.wechatitchat4jprovider.utils.JedisUtil;
+import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -50,30 +60,33 @@ import java.util.regex.Matcher;
 public class LoginServiceImpl implements ILoginService {
     private static Logger LOG = LoggerFactory.getLogger(LoginServiceImpl.class);
     @Autowired
-    UserRepository userRepository;
+    UserInfoRepository userRepository;
     @Autowired
     RestTemplate restTemplate;
-    //    @Autowired
-//    RedisServiceImpl<List<User>> userRedisService;
     @Autowired
     RedisTemplate redisTemplate;
     @Autowired
     StringRedisTemplate stringRedisTemplate;
-
-    public LoginServiceImpl() {
-
-    }
+    @Autowired
+    BaseReponseBeanRepository baseReponseBeanRepository;
+    @Autowired
+    ContactListBeanRepository contactListBeanRepository;
+    @Autowired
+    ListBeanRepository listBeanRepository;
+    @Autowired
+    MPArticleListBeanRepository mpArticleListBeanRepository;
+    @Autowired
+    MPSubcribeMsgListBeanRepository mpSubcribeMsgListBeanRepository;
+    @Autowired
+    SyncKeyBeanRepository syncKeyBeanRepository;
+    @Autowired
+    WechatInitBeanRepository wechatInitBeanRepository;
 
     @Override
     public boolean login(User user) {
         boolean isLogin = false;
         // 组装参数和URL
         List<BasicNameValuePair> params = new ArrayList<>();
-
-
-        // long time = 4000;
-//        while (!isLogin) {
-        // SleepUtils.sleep(time += 1000);
         long millis = System.currentTimeMillis();
         params.clear();
         params.add(new BasicNameValuePair(LoginParaEnum.LOGIN_ICON.para(), LoginParaEnum.LOGIN_ICON.value()));
@@ -83,34 +96,30 @@ public class LoginServiceImpl implements ILoginService {
         params.add(new BasicNameValuePair(LoginParaEnum._.para(), String.valueOf(millis)));
         MyHttpClient myHttpClient = MyHttpClient.getInstance();
         HttpEntity entity = myHttpClient.doGet(URLEnum.LOGIN_URL.getUrl(), params, true, null);
-
         try {
             String result = EntityUtils.toString(entity);
-            LOG.info("login result : " + result + "     " + params);
             String status = checklogin(result);
+            LOG.info("login result : " + result + "     " + params);
             if (ResultEnum.SUCCESS.getCode().equals(status)) {
-                processLoginInfo(result, user.getWechatId()); // 处理结果
+                user = processLoginInfo(result, user); // 处理结果
                 isLogin = true;
                 user.setAlive(isLogin);
-//                    JedisUtil je = JedisUtil.getRu();
-//                    je.lpush("user", JSON.toJSONString(user));
-//                    userRepository.saveAndFlush(user);
-                System.out.println("登录成功！！！！");
-//                break;
+                JedisUtil je = JedisUtil.getRu();
+                je.lpush("user", JSON.toJSONString(user));
+                System.out.println("login success！！！！");
             }
             if (ResultEnum.WAIT_CONFIRM.getCode().equals(status)) {
                 LOG.info("please click Login Button");
             }
 
         } catch (Exception e) {
-            LOG.error("微信登陆异常！", e);
+            LOG.error("login error！", e);
         }
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-//        }
         return isLogin;
     }
 
@@ -124,8 +133,6 @@ public class LoginServiceImpl implements ILoginService {
         params.add(new BasicNameValuePair(UUIDParaEnum.LANG.para(), UUIDParaEnum.LANG.value()));
         params.add(new BasicNameValuePair(UUIDParaEnum._.para(), String.valueOf(System.currentTimeMillis())));
 
-//        try {
-//            String result = restTemplate.getForObject(URLEnum.UUID_URL.getUrl(), String.class, params);
         MyHttpClient myHttpClient = MyHttpClient.getInstance();
         HttpEntity entity = myHttpClient.doGet(URLEnum.UUID_URL.getUrl(), params, true, null);
 
@@ -164,87 +171,86 @@ public class LoginServiceImpl implements ILoginService {
             out.write(bytes);
             out.flush();
             out.close();
-            try {
-//				CommonTools.printQr(qrPath); // 打开登陆二维码图片
-            } catch (Exception e) {
-                LOG.info(e.getMessage());
-            }
-
         } catch (Exception e) {
             LOG.info(e.getMessage());
             return qrPath;
         }
-
         return qrPath;
     }
 
     @Override
     public boolean webWxInit(String wechatId) {
-//        User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
-//        core.setAlive(true);
-//        core.setLastNormalRetcodeTime(System.currentTimeMillis());
-//        // 组装请求URL和参数
-//        String url = String.format(URLEnum.INIT_URL.getUrl(),
-//                core.getUrl(),
-//                String.valueOf(System.currentTimeMillis() / 3158L),
-//                core.getPass_ticket());
-//
-//        Map<String, Object> paramMap = getParamMap();
-//
-//        // 请求初始化接口
-//        MyHttpClient myHttpClient = MyHttpClient.getInstance();
-//        HttpEntity entity = myHttpClient.doPost(url, JSON.toJSONString(paramMap));
-//        try {
-//            String result = EntityUtils.toString(entity, Consts.UTF_8);
-//            JSONObject obj = JSON.parseObject(result);
-//
-//            JSONObject user = obj.getJSONObject(StorageLoginInfoEnum.User.getKey());
-//            JSONObject syncKey = obj.getJSONObject(StorageLoginInfoEnum.SyncKey.getKey());
-//
-//            core.setInviteStartCount(obj.getInteger(StorageLoginInfoEnum.InviteStartCount.getKey()));
-//            core.setSyncKey(String.valueOf(syncKey));
-//
-//            JSONArray syncArray = syncKey.getJSONArray("List");
-//            StringBuilder sb = new StringBuilder();
-//            for (int i = 0; i < syncArray.size(); i++) {
-//                sb.append(syncArray.getJSONObject(i).getString("Key") + "_"
-//                        + syncArray.getJSONObject(i).getString("Val") + "|");
-//            }
-//            // 1_661706053|2_661706420|3_661706415|1000_1494151022|
-//            String synckey = sb.toString();
-//
-//            // 1_661706053|2_661706420|3_661706415|1000_1494151022
-//            core.setSynckey(synckey.substring(0, synckey.length() - 1));// 1_656161336|2_656161626|3_656161313|11_656159955|13_656120033|201_1492273724|1000_1492265953|1001_1492250432|1004_1491805192
-//            core.setUserName(user.getString("UserName"));
-//            core.setNickName(user.getString("NickName"));
-//            core.setUserSelf(String.valueOf(obj.getJSONObject("User")));
-//
-//            String chatSet = obj.getString("ChatSet");
-//            String[] chatSetArray = chatSet.split(",");
-//            List<GroupName> groupNames = new ArrayList<>();
-//            for (int i = 0; i < chatSetArray.length; i++) {
-//                if (chatSetArray[i].indexOf("@@") != -1) {
-//                    // 更新GroupIdList
-//                    groupNames.add(new GroupName(chatSetArray[i]));
-//
-//                }
-//            }
-//            core.getGroupIdList().addAll(groupNames);
-//            userRepository.save(core);
-//            // JSONArray contactListArray = obj.getJSONArray("ContactList");
-//            // for (int i = 0; i < contactListArray.size(); i++) {
-//            // JSONObject o = contactListArray.getJSONObject(i);
-//            // if (o.getString("UserName").indexOf("@@") != -1) {
-//            // core.getGroupIdList().add(o.getString("UserName")); //
-//            // // 更新GroupIdList
-//            // core.getGroupList().add(o); // 更新GroupList
-//            // core.getGroupNickNameList().add(o.getString("NickName"));
-//            // }
-//            // }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return false;
-//        }
+        User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
+        core.setAlive(true);
+        core.setLastNormalRetcodeTime(System.currentTimeMillis());
+        // 组装请求URL和参数
+        String url = String.format(URLEnum.INIT_URL.getUrl(),
+                core.getUrl(),
+                String.valueOf(System.currentTimeMillis() / 3158L),
+                core.getPass_ticket());
+        Map<String, Object> paramMap = getParamMap(core);
+        // 请求初始化接口
+        MyHttpClient myHttpClient = MyHttpClient.getInstance();
+        HttpEntity entity = myHttpClient.doPost(url, JSON.toJSONString(paramMap));
+        try {
+            String result = EntityUtils.toString(entity, Consts.UTF_8);
+            LOG.info("webWxInit: result:   " + result);
+            WechatinitBean jsonRootBean = JSONUtils.parser(result, WechatinitBean.class);
+            //保存获取到的user信息
+            User user = jsonRootBean.getUser();
+            List<ContactListBean> contactListBean = jsonRootBean.getContactList();
+            contactListBeanRepository.save(contactListBean);
+            user.setContactlist(contactListBean);
+            user.setMpsubscribemsglist(jsonRootBean.getMPSubscribeMsgList());
+            SyncKeyBean syncKeyBean = jsonRootBean.getSyncKey();
+            syncKeyBeanRepository.save(syncKeyBean);
+            user.setSyncKey(syncKeyBean);
+            userRepository.save(user);
+            core.setInviteStartCount(jsonRootBean.getInviteStartCount());
+            core.setSyncKey(syncKeyBean);
+
+            List<ListBean> syncArray = syncKeyBean.getList();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < syncArray.size(); i++) {
+                sb.append(syncArray.get(i).getKey() + "_"
+                        + syncArray.get(i).getVal() + "|");
+            }
+            // 1_661706053|2_661706420|3_661706415|1000_1494151022|
+            String synckey = sb.toString();
+
+            // 1_661706053|2_661706420|3_661706415|1000_1494151022
+            core.setSynckey(synckey.substring(0, synckey.length() - 1));// 1_656161336|2_656161626|3_656161313|11_656159955|13_656120033|201_1492273724|1000_1492265953|1001_1492250432|1004_1491805192
+            core.setUsername(user.getUsername());
+            core.setNickname(user.getNickname());
+            core.setUserSelf(jsonRootBean.getUser());
+
+            String chatSet = jsonRootBean.getChatSet();
+            System.out.println("chatSet ::   " + chatSet);
+            String[] chatSetArray = chatSet.split(",");
+            List<GroupName> groupNames = new ArrayList<>();
+            for (int i = 0; i < chatSetArray.length; i++) {
+                if (chatSetArray[i].contains("@@")) {
+                    // 更新GroupIdList
+                    groupNames.add(new GroupName(chatSetArray[i]));
+                }
+            }
+            core.getGroupIdList().addAll(groupNames);
+            userRepository.save(core);
+            List<ContactListBean> contactListArray = jsonRootBean.getContactList();
+            for (int i = 0; i < contactListArray.size(); i++) {
+                ContactListBean o = contactListArray.get(i);
+                if (o.getUserName().contains("@@")) {
+
+                    core.getGroupIdList().add(new GroupName(o.getUserName())); //
+                    // 更新GroupIdList
+                    core.getGroupList().add(o); // 更新GroupList
+                    core.getGroupNickNameList().add(new GroupName(o.getNickName()));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
         return true;
     }
 
@@ -255,10 +261,10 @@ public class LoginServiceImpl implements ILoginService {
         String url = String.format(URLEnum.STATUS_NOTIFY_URL.getUrl(),
                 u.getPass_ticket());
 
-        Map<String, Object> paramMap = getParamMap();
+        Map<String, Object> paramMap = getParamMap(u);
         paramMap.put(StatusNotifyParaEnum.CODE.para(), StatusNotifyParaEnum.CODE.value());
-        paramMap.put(StatusNotifyParaEnum.FROM_USERNAME.para(), u.getUserName());
-        paramMap.put(StatusNotifyParaEnum.TO_USERNAME.para(), u.getUserName());
+        paramMap.put(StatusNotifyParaEnum.FROM_USERNAME.para(), u.getUsername());
+        paramMap.put(StatusNotifyParaEnum.TO_USERNAME.para(), u.getUsername());
         paramMap.put(StatusNotifyParaEnum.CLIENT_MSG_ID.para(), System.currentTimeMillis());
         String paramStr = JSON.toJSONString(paramMap);
 
@@ -282,8 +288,8 @@ public class LoginServiceImpl implements ILoginService {
             public void run() {
                 while (core.isAlive()) {
                     try {
-                        Map<String, String> resultMap = syncCheck(wechatId);
-                        LOG.info(JSONObject.toJSONString(resultMap));
+                        Map<String, String> resultMap = syncCheck(core);
+                        LOG.info("resultMap   "+JSONObject.toJSONString(resultMap));
                         String retcode = resultMap.get("retcode");
                         String selector = resultMap.get("selector");
                         if (retcode.equals(RetCodeEnum.UNKOWN.getCode())) {
@@ -300,16 +306,15 @@ public class LoginServiceImpl implements ILoginService {
                             break;
                         } else if (retcode.equals(RetCodeEnum.NORMAL.getCode())) {
                             core.setLastNormalRetcodeTime(System.currentTimeMillis()); // 最后收到正常报文时间
-                            JSONObject msgObj = webWxSync(wechatId);
+                            WebWxSync msgObj = webWxSync(core);
                             if (selector.equals("2")) {
                                 if (msgObj != null) {
                                     try {
-                                        JSONArray msgList = new JSONArray();
-                                        msgList = msgObj.getJSONArray("AddMsgList");
+                                        List<BaseMsg> msgList;
+                                        msgList = msgObj.getAddmsglist();
                                         msgList = MsgCenter.produceMsg(msgList);
                                         for (int j = 0; j < msgList.size(); j++) {
-                                            BaseMsg baseMsg = JSON.toJavaObject(msgList.getJSONObject(j),
-                                                    BaseMsg.class);
+                                            BaseMsg baseMsg = msgList.get(j);
                                             core.getMsgList().add(baseMsg);
                                         }
                                     } catch (Exception e) {
@@ -317,7 +322,7 @@ public class LoginServiceImpl implements ILoginService {
                                     }
                                 }
                             } else if (selector.equals("7")) {
-                                webWxSync(wechatId);
+                                webWxSync(core);
                             } else if (selector.equals("4")) {
                                 continue;
                             } else if (selector.equals("3")) {
@@ -325,17 +330,16 @@ public class LoginServiceImpl implements ILoginService {
                             } else if (selector.equals("6")) {
                                 if (msgObj != null) {
                                     try {
-                                        JSONArray msgList = new JSONArray();
-                                        msgList = msgObj.getJSONArray("AddMsgList");
-                                        JSONArray modContactList = msgObj.getJSONArray("ModContactList"); // 存在删除或者新增的好友信息
+                                        List<BaseMsg> msgList;
+                                        msgList = msgObj.getAddmsglist();
+                                        List<ContactListBean> modContactList = msgObj.getModcontactlist(); // 存在删除或者新增的好友信息
                                         msgList = MsgCenter.produceMsg(msgList);
+
                                         for (int j = 0; j < msgList.size(); j++) {
-                                            JSONObject userInfo = modContactList.getJSONObject(j);
+                                            ContactListBean userInfo = modContactList.get(j);
                                             // 存在主动加好友之后的同步联系人到本地
-                                            System.out.println("    这里没写！！！！！！！！！！！！！" +
-                                                    "1！！！！！！！！！！     " + userInfo);
                                             //TODO
-//                                            core.getContactList().add(userInfo);
+                                            core.getContactlist().add(userInfo);
                                         }
                                     } catch (Exception e) {
                                         LOG.info(e.getMessage());
@@ -344,7 +348,7 @@ public class LoginServiceImpl implements ILoginService {
 
                             }
                         } else {
-                            JSONObject obj = webWxSync(wechatId);
+                            WebWxSync obj = webWxSync(core);
                         }
                     } catch (Exception e) {
                         LOG.info(e.getMessage());
@@ -359,7 +363,11 @@ public class LoginServiceImpl implements ILoginService {
                             }
                         }
                     }
-
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }).start();
@@ -371,21 +379,25 @@ public class LoginServiceImpl implements ILoginService {
         User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
         String url = String.format(URLEnum.WEB_WX_GET_CONTACT.getUrl(),
                 core.getUrl());
-        Map<String, Object> paramMap = getParamMap();
+        Map<String, Object> paramMap = getParamMap(core);
+        MyHttpClient httpClient = MyHttpClient.getInstance();
+        HttpEntity entity = httpClient.doPost(url, JSON.toJSONString(paramMap));
 
         try {
-            String result = restTemplate.postForObject(url, paramMap, String.class, paramMap);
-            JSONObject fullFriendsJsonList = JSON.parseObject(result);
+            String result = EntityUtils.toString(entity, Consts.UTF_8);
+            System.out.println("webWxGetContact    :::   " + result);
+//            JSONObject fullFriendsJsonList = JSON.parseObject(result);
+            GetContctBean getContctBean = JSONUtils.parser(result, GetContctBean.class);
             // 查看seq是否为0，0表示好友列表已全部获取完毕，若大于0，则表示好友列表未获取完毕，当前的字节数（断点续传）
-            long seq = 0;
+            Long seq = 0L;
             long currentTime = 0L;
             List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
-            if (fullFriendsJsonList.get("Seq") != null) {
-                seq = fullFriendsJsonList.getLong("Seq");
+            if (getContctBean.getSeq() != null) {
+                seq = getContctBean.getSeq();
                 currentTime = new Date().getTime();
             }
-            core.setMemberCount(fullFriendsJsonList.getInteger(StorageLoginInfoEnum.MemberCount.getKey()));
-            JSONArray member = fullFriendsJsonList.getJSONArray(StorageLoginInfoEnum.MemberList.getKey());
+            core.setMemberCount(getContctBean.getMemberCount());
+            List<ContactListBean> member = getContctBean.getMemberList();
             // 循环获取seq直到为0，即获取全部好友列表 ==0：好友获取完毕 >0：好友未获取完毕，此时seq为已获取的字节数
             while (seq > 0) {
                 // 设置seq传参
@@ -395,36 +407,35 @@ public class LoginServiceImpl implements ILoginService {
                 params.remove(new BasicNameValuePair("seq", String.valueOf(seq)));
 
                 result = restTemplate.getForObject(url, String.class, params);
-                fullFriendsJsonList = JSON.parseObject(result);
+                getContctBean = JSONUtils.parser(result, GetContctBean.class);
 
-                if (fullFriendsJsonList.get("Seq") != null) {
-                    seq = fullFriendsJsonList.getLong("Seq");
+                if (getContctBean.getSeq() != null) {
+                    seq = getContctBean.getSeq();
                     currentTime = new Date().getTime();
                 }
 
                 // 累加好友列表
-                member.addAll(fullFriendsJsonList.getJSONArray(StorageLoginInfoEnum.MemberList.getKey()));
+                member.addAll(getContctBean.getMemberList());
             }
             core.setMemberCount(member.size());
-//            for (Iterator<?> iterator = member.iterator(); iterator.hasNext(); ) {
-//                JSONObject o = (JSONObject) iterator.next();
-//                if ((o.getInteger("VerifyFlag") & 8) != 0) { // 公众号/服务号
-//                    core.getPublicUsersList().add(o);
-//                } else if (Config.API_SPECIAL_USER.contains(o.getString("UserName"))) { // 特殊账号
-//                    core.getSpecialUsersList().add(o);
-//                } else if (o.getString("UserName").indexOf("@@") != -1) { // 群聊
-//                    if (!core.getGroupIdList().contains(o.getString("UserName"))) {
-//                        //TODO 这里比较乱，到时候再改。
-//                        core.getGroupNickNameList().add(new GroupName(o.getString("NickName")));
-//                        core.getGroupIdList().add(new GroupName(o.getString("UserName")));
-//                        core.getGroupList().add(o);
-//                    }
-//                } else if (o.getString("UserName").equals(core.getUserSelf().getString("UserName"))) { // 自己
-//                    core.getContactList().remove(o);
-//                } else { // 普通联系人
-//                    core.getContactList().add(o);
-//                }
-//            }
+            for (Iterator<?> iterator = member.iterator(); iterator.hasNext(); ) {
+                ContactListBean o = (ContactListBean) iterator.next();
+                if ((o.getVerifyFlag() & 8) != 0) { // 公众号/服务号
+                    core.getPublicUsersList().add(o);
+                } else if (Config.API_SPECIAL_USER.contains(o.getUserName())) { // 特殊账号
+                    core.getSpecialUsersList().add(o);
+                } else if (o.getUserName().contains("@@")) { // 群聊
+                    if (!core.getGroupIdList().contains(o.getUserName())) {
+                        core.getGroupNickNameList().add(new GroupName(o.getNickName()));
+                        core.getGroupIdList().add(new GroupName(o.getUserName()));
+                        core.getGroupList().add(o);
+                    }
+                } else if (o.getUserName().equals(core.getUserSelf().getUsername())) { // 自己
+                    core.getContactlist().remove(o);
+                } else { // 普通联系人
+                    core.getContactlist().add(o);
+                }
+            }
             return;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
@@ -439,28 +450,31 @@ public class LoginServiceImpl implements ILoginService {
         String url = String.format(URLEnum.WEB_WX_BATCH_GET_CONTACT.getUrl(),
                 core.getUrl(), new Date().getTime(),
                 core.getPass_ticket());
-        Map<String, Object> paramMap = getParamMap();
+        Map<String, Object> paramMap = getParamMap(core);
         paramMap.put("Count", core.getGroupIdList().size());
         List<Map<String, String>> list = new ArrayList<Map<String, String>>();
         for (int i = 0; i < core.getGroupIdList().size(); i++) {
             HashMap<String, String> map = new HashMap<String, String>();
-//            map.put("UserName", core.getGroupIdList().get(i)); //TODO 以后再改
+            map.put("UserName", core.getGroupIdList().get(i).getName()); //TODO 以后再改
             map.put("EncryChatRoomId", "");
             list.add(map);
         }
         paramMap.put("List", list);
+        MyHttpClient myHttpClient = MyHttpClient.getInstance();
+        HttpEntity entity = myHttpClient.doPost(url, JSON.toJSONString(paramMap));
         try {
-            String text = restTemplate.postForObject(url, paramMap, String.class, paramMap);
+            String text = EntityUtils.toString(entity, Consts.UTF_8);
+            LOG.info("WebWxBatchGetContact:::   " + text);
             JSONObject obj = JSON.parseObject(text);
             JSONArray contactList = obj.getJSONArray("ContactList");
-            for (int i = 0; i < contactList.size(); i++) { // 群好友
-                if (contactList.getJSONObject(i).getString("UserName").indexOf("@@") > -1) { // 群
+//            for (int i = 0; i < contactList.size(); i++) { // 群好友
+//                if (contactList.getJSONObject(i).getString("UserName").indexOf("@@") > -1) { // 群
 //                    core.getGroupNickNameList().add(contactList.getJSONObject(i).getString("NickName")); // 更新群昵称列表
 //                    core.getGroupList().add(contactList.getJSONObject(i)); // 更新群信息（所有）列表
 //                    core.getGroupMemeberMap().put(contactList.getJSONObject(i).getString("UserName"),
 //                            contactList.getJSONObject(i).getJSONArray("MemberList")); // 更新群成员Map
-                }
-            }
+//                }
+//            }
         } catch (Exception e) {
             LOG.info(e.getMessage());
         }
@@ -484,13 +498,12 @@ public class LoginServiceImpl implements ILoginService {
     /**
      * 处理登陆信息
      *
-     * @param result
+     * @param
+     * @param wechatId
      * @author https://github.com/yaphone
      * @date 2017年4月9日 下午12:16:26
      */
-    private void processLoginInfo(String loginContent, String wechatId) {
-        User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
-
+    private User processLoginInfo(String loginContent, User core) {
         String regEx = "window.redirect_uri=\"(\\S+)\";";
         Matcher matcher = CommonTools.getMatcher(regEx, loginContent);
         if (matcher.find()) {
@@ -528,9 +541,10 @@ public class LoginServiceImpl implements ILoginService {
                 text = EntityUtils.toString(entity);
             } catch (Exception e) {
                 LOG.info(e.getMessage());
-                return;
+                return core;
             }
             Document doc = CommonTools.xmlParser(text);
+            LOG.info("doc:: " + doc.getDocumentURI() + "   " + doc.getInputEncoding() + "   " + doc.getXmlEncoding() + "   " + doc.getXmlVersion());
             if (doc != null) {
                 core.setSkey(
                         doc.getElementsByTagName(StorageLoginInfoEnum.skey.getKey()).item(0).getFirstChild()
@@ -545,8 +559,10 @@ public class LoginServiceImpl implements ILoginService {
                         doc.getElementsByTagName(StorageLoginInfoEnum.pass_ticket.getKey()).item(0).getFirstChild()
                                 .getNodeValue());
             }
-
         }
+        core.setAlive(true);
+        userRepository.saveAndFlush(core);
+        return core;
     }
 
     private Map<String, List<String>> getPossibleUrlMap() {
@@ -614,58 +630,64 @@ public class LoginServiceImpl implements ILoginService {
     /**
      * 同步消息 sync the messages
      *
+     * @param
      * @return
      * @author https://github.com/yaphone
      * @date 2017年5月12日 上午12:24:55
      */
-    private JSONObject webWxSync(String wechatId) {
-//        User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
-//        JSONObject result = null;
-//        String url = String.format(URLEnum.WEB_WX_SYNC_URL.getUrl(),
-//                core.getUrl(),
-//                core.getWxsid(),
-//                core.getSkey(),
-//                core.getPass_ticket());
-//        Map<String, Object> paramMap = getParamMap();
-//        paramMap.put(StorageLoginInfoEnum.SyncKey.getKey(),
-//                core.getSyncKey());
-//        paramMap.put("rr", -new Date().getTime() / 1000);
-//        String paramStr = JSON.toJSONString(paramMap);
-//        try {
-//            String text = restTemplate.postForObject(url, paramStr, String.class, paramStr);
-//            JSONObject obj = JSON.parseObject(text);
-//            if (obj.getJSONObject("BaseResponse").getInteger("Ret") != 0) {
-//                result = null;
-//            } else {
-//                result = obj;
-//                core.setSyncKey(String.valueOf(obj.getJSONObject("SyncCheckKey")));
-//                JSONArray syncArray = obj.getJSONObject(StorageLoginInfoEnum.SyncKey.getKey()).getJSONArray("List");
-//                StringBuilder sb = new StringBuilder();
-//                for (int i = 0; i < syncArray.size(); i++) {
-//                    sb.append(syncArray.getJSONObject(i).getString("Key") + "_"
-//                            + syncArray.getJSONObject(i).getString("Val") + "|");
-//                }
-//                String synckey = sb.toString();
-//                core.setSynckey(
-//                        synckey.substring(0, synckey.length() - 1));// 1_656161336|2_656161626|3_656161313|11_656159955|13_656120033|201_1492273724|1000_1492265953|1001_1492250432|1004_1491805192
-//            }
-//        } catch (Exception e) {
-//            LOG.info(e.getMessage());
-//        }
-//        return result;
+    private WebWxSync webWxSync(User core) {
+        WebWxSync jsonRootBean = null;
+        String url = String.format(URLEnum.WEB_WX_SYNC_URL.getUrl(),
+                core.getUrl(),
+                core.getWxsid(),
+                core.getSkey(),
+                core.getPass_ticket());
+        Map<String, Object> paramMap = getParamMap(core);
+        paramMap.put(StorageLoginInfoEnum.SyncKey.getKey(),
+                core.getSyncKey());
+        paramMap.put("rr", -new Date().getTime() / 1000);
+        String paramStr = JSON.toJSONString(paramMap);
+        try {
+            MyHttpClient myHttpClient = MyHttpClient.getInstance();
+            HttpEntity entity = myHttpClient.doPost(url, paramStr);
+            String text = EntityUtils.toString(entity, Consts.UTF_8);
 
-        return null;
+//            webWxSync = JSONUtils.parser(text, WebWxSync.class);
+//            JSONObject obj = JSON.parseObject(text);
+            jsonRootBean = JSONUtils.parser(text, WebWxSync.class);
+            if (jsonRootBean.getSynckey().getCount() > 0) {
+                LOG.info("webWxSync   text   " + text);
+            }
+            if (jsonRootBean.getBaseresponse().getRet() != 0) {
+            } else {
+                core.setSyncKey(jsonRootBean.getSynckey());
+                List<ListBean> syncArray = jsonRootBean.getSynckey().getList();
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < syncArray.size(); i++) {
+//                    throw new Exception("之前这里获取的数据为空，代码没办法设计，如果不为空的时候，再改造");
+                    sb.append(syncArray.get(i).getKey() + "_"
+                            + syncArray.get(i).getVal() + "|");
+                }
+                String synckey = sb.toString();
+                core.setSynckey(
+                        synckey.substring(0, synckey.length() - 1));// 1_656161336|2_656161626|3_656161313|11_656159955|13_656120033|201_1492273724|1000_1492265953|1001_1492250432|1004_1491805192
+            }
+        } catch (Exception e) {
+            LOG.info(e.getMessage());
+        }
+        return jsonRootBean;
     }
 
     /**
      * 检查是否有新消息 check whether there's a message
      *
+     * @param
      * @return
      * @author https://github.com/yaphone
      * @date 2017年4月16日 上午11:11:34
      */
-    private Map<String, String> syncCheck(String wechatId) {
-        User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
+    private Map<String, String> syncCheck(User core) {
+//        User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
         Map<String, String> resultMap = new HashMap<String, String>();
         // 组装请求URL和参数
         String url = core.getSyncUrl() + URLEnum.SYNC_CHECK_URL.getUrl();
@@ -680,19 +702,22 @@ public class LoginServiceImpl implements ILoginService {
         params.add(new BasicNameValuePair("uin", core.getWxuin()));
         params.add(new BasicNameValuePair("sid", core.getWxsid()));
         params.add(new BasicNameValuePair("skey", core.getSkey()));
-        params.add(new BasicNameValuePair("seviceid", core.getPass_ticket()));
+        params.add(new BasicNameValuePair("deviceid", core.getPass_ticket()));
 //        }
         params.add(new BasicNameValuePair("r", String.valueOf(new Date().getTime())));
         params.add(new BasicNameValuePair("synckey", (String) core.getSynckey()));
         params.add(new BasicNameValuePair("_", String.valueOf(new Date().getTime())));
         SleepUtils.sleep(7);
         try {
-            String text = restTemplate.getForObject(url, String.class, params);
-            if (text == null) {
+            MyHttpClient myHttpClient = MyHttpClient.getInstance();
+
+            HttpEntity entity = myHttpClient.doGet(url, params, true, null);
+            if (entity == null) {
                 resultMap.put("retcode", "9999");
                 resultMap.put("selector", "9999");
                 return resultMap;
             }
+            String text = EntityUtils.toString(entity);
             String regEx = "window.synccheck=\\{retcode:\"(\\d+)\",selector:\"(\\d+)\"\\}";
             Matcher matcher = CommonTools.getMatcher(regEx, text);
             if (!matcher.find() || matcher.group(1).equals("2")) {
@@ -711,7 +736,7 @@ public class LoginServiceImpl implements ILoginService {
     /**
      * 请求参数
      */
-    public Map<String, Object> getParamMap() {
+    public Map<String, Object> getParamMap(User user) {
 
         Map<String, Object> map = new HashMap<>();
 
@@ -722,10 +747,12 @@ public class LoginServiceImpl implements ILoginService {
          DeviceID("DeviceID", "pass_ticket");
 
          */
-        map.put("Uin", "wxuin");
-        map.put("Sid", "wxsid");
-        map.put("Skey", "skey");
-        map.put("DeviceID", "pass_ticket");
-        return map;
+        map.put("Uin", user.getWxuin());
+        map.put("Sid", user.getWxsid());
+        map.put("Skey", user.getSkey());
+        map.put("DeviceID", user.getPass_ticket());
+        HashMap<String, Object> result = new HashMap<>();
+        result.put("BaseRequest", map);
+        return result;
     }
 }

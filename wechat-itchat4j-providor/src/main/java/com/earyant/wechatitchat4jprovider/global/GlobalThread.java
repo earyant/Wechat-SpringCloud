@@ -45,38 +45,37 @@ public class GlobalThread {
                 }
                 if (user != null && !user.isAlive() && loginService.login(user)) {
 
-                    LOG.info("5. 登陆成功，微信初始化");
+                    LOG.info("5.login success , wechat Init");
                     if (!loginService.webWxInit(user.getWechatId())) {
-                        LOG.info("6. 微信初始化异常");
-                        System.exit(0);
+                        LOG.info("6. wechat init excption");
                     }
 
-                    LOG.info("6. 开启微信状态通知");
+                    LOG.info("6. start wechat notify");
                     loginService.wxStatusNotify(user.getWechatId());
 
-                    LOG.info("7. 清除。。。。");
+                    LOG.info("7. clear。。。。");
                     CommonTools.clearScreen();
-                    LOG.info(String.format("欢迎回来， %s", user.getNickName()));
+                    LOG.info(String.format("welcome back， %s", user.getNickname()));
 
-                    LOG.info("8. 开始接收消息");
+                    LOG.info("8. start receive message ");
                     loginService.startReceiving(user.getWechatId());
 
-                    LOG.info("9. 获取联系人信息");
+                    LOG.info("9. get contact message");
                     loginService.webWxGetContact(user.getWechatId());
 
-                    LOG.info("10. 获取群好友及群好友列表");
+                    LOG.info("10. get group and group list");
                     loginService.WebWxBatchGetContact(user.getWechatId());
 
-                    LOG.info("11. 缓存本次登陆好友相关消息");
+                    LOG.info("11. cache friend message");
                     WechatTools.setUserInfo(); // 登陆成功后缓存本次登陆好友相关消息（NickName, UserName）
 
-                    LOG.info("12.开启微信状态检测线程");
+                    LOG.info("12.open wechat status tread");
                     new Thread(new CheckLoginStatusThread()).start();
                 } else {
-                    je.lpush("user", JSON.toJSONString(user));
+                    je.rpush("user", JSON.toJSONString(user));
                 }
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

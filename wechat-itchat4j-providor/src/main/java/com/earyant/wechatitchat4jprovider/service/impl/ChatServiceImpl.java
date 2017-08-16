@@ -4,7 +4,7 @@ import com.earyant.wechat.message.resp.Image;
 import com.earyant.wechat.message.resp.ImageMessage;
 import com.earyant.wechat.util.HttpPostUploadUtil;
 import com.earyant.wechat.util.MessageUtil;
-import com.earyant.wechatitchat4jprovider.dao.repository.UserRepository;
+import com.earyant.wechatitchat4jprovider.dao.repository.UserInfoRepository;
 import com.earyant.wechatitchat4jprovider.handler.WechatHandler;
 import com.earyant.wechatitchat4jprovider.itchat4j.face.IMsgHandlerFace;
 import com.earyant.wechatitchat4jprovider.itchat4j.service.ILoginService;
@@ -32,7 +32,7 @@ public class ChatServiceImpl implements ChatService {
     @Autowired
     private ILoginService loginService;
     @Autowired
-    UserRepository userRepository;
+    UserInfoRepository userRepository;
 
     @Override
     public String chat(Map<String, String> map, String path) {
@@ -82,6 +82,7 @@ public class ChatServiceImpl implements ChatService {
         Map<String, String> fileMap = new HashMap<String, String>();
         fileMap.put("userfile", filepath);
         String mediaidrs = util.formUpload(textMap, fileMap);
+        LOG.info("mediaidrs::  " + mediaidrs);
         String mediaid = JSONObject.fromObject(mediaidrs).getString("media_id");
         img.setMediaId(mediaid);
         imageMessage.setImage(img);
@@ -106,42 +107,6 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public String login(HashMap<String, String> map) {
-
-//        Core core = new Core();
-//        MyHttpClient httpClient = core.getMyHttpClient();
-//        boolean isLogin = false;
-//        // 组装参数和URL
-//        List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
-//        params.add(new BasicNameValuePair(LoginParaEnum.LOGIN_ICON.para(), LoginParaEnum.LOGIN_ICON.value()));
-//        params.add(new BasicNameValuePair(LoginParaEnum.UUID.para(), core.getUuid()));
-//        params.add(new BasicNameValuePair(LoginParaEnum.TIP.para(), LoginParaEnum.TIP.value()));
-//
-//        // long time = 4000;
-//        while (!isLogin) {
-//            long millis = System.currentTimeMillis();
-//            params.add(new BasicNameValuePair(LoginParaEnum.R.para(), String.valueOf(millis / 1579L)));
-//            params.add(new BasicNameValuePair(LoginParaEnum._.para(), String.valueOf(millis)));
-//            HttpEntity entity = httpClient.doGet(URLEnum.LOGIN_URL.getUrl(), params, true, null);
-//
-//            try {
-//                String result = EntityUtils.toString(entity);
-//                String status = checklogin(result);
-//
-//                if (ResultEnum.SUCCESS.getCode().equals(status)) {
-//                    processLoginInfo(result); // 处理结果
-//                    isLogin = true;
-//                    core.setAlive(isLogin);
-//                    break;
-//                }
-//                if (ResultEnum.WAIT_CONFIRM.getCode().equals(status)) {
-//                    LOG.info("请点击微信确认按钮，进行登陆");
-//                }
-//
-//            } catch (Exception e) {
-//                LOG.error("微信登陆异常！", e);
-//            }
-//        }
-
         return null;
     }
 }

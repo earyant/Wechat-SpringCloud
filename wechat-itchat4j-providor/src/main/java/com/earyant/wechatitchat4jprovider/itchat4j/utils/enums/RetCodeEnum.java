@@ -2,29 +2,27 @@ package com.earyant.wechatitchat4jprovider.itchat4j.utils.enums;
 
 public enum RetCodeEnum {
 
-	NORMAL("0", "普通"),
-	LOGIN_OUT("1102", "退出"),
-	LOGIN_OTHERWHERE("1101", "其它地方登陆"),
-	MOBILE_LOGIN_OUT("1102", "移动端退出"),
-	UNKOWN("9999", "未知")
-	
-	;
-	
-	
-	private String code;
-	private String type;
+    NORMAL("0", "comment"),
+    LOGIN_OUT("1102", "quit"),
+    LOGIN_OTHERWHERE("1101", "orther login"),
+    MOBILE_LOGIN_OUT("1102", "phone exit"),
+    UNKOWN("9999", "unkown");
 
-	RetCodeEnum(String code, String type) {
-		this.code = code;
-		this.type = type;
-	}
 
-	public String getCode() {
-		return code;
-	}
+    private String code;
+    private String type;
 
-	public String getType() {
-		return type;
-	}
+    RetCodeEnum(String code, String type) {
+        this.code = code;
+        this.type = type;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getType() {
+        return type;
+    }
 
 }
