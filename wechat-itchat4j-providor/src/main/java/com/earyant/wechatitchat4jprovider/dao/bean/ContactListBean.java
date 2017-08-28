@@ -83,9 +83,7 @@ public class ContactListBean {
     private int IsOwner;
     @ManyToMany
     private List<ContactListBean> MemberList;
-
-    @ManyToOne
-    WechatinitBean wechatinitBean;
+    String userId;
 //    @OneToMany
 //    User user;
 }

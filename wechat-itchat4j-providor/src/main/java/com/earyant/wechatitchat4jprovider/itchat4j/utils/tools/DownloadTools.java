@@ -1,6 +1,6 @@
 package com.earyant.wechatitchat4jprovider.itchat4j.utils.tools;
 
-import com.earyant.wechatitchat4jprovider.itchat4j.beans.BaseMsg;
+import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.core.Core;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.MyHttpClient;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.MsgTypeEnum;
@@ -35,12 +35,10 @@ public class DownloadTools {
 	 * 
 	 * @author https://github.com/yaphone
 	 * @date 2017年4月21日 下午11:00:25
-	 * @param url
-	 * @param msgId
-	 * @param path
-	 * @return
+	 * @param msg
+     *@param path  @return
 	 */
-	public static Object getDownloadFn(BaseMsg msg, String type, String path) {
+	public static Object getDownloadFn(WebWxSync.AddMsgListBean msg, String type, String path) {
 		Map<String, String> headerMap = new HashMap<String, String>();
 		List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
 		String url = "";
@@ -58,7 +56,7 @@ public class DownloadTools {
 			params.add(new BasicNameValuePair("mediaid", msg.getMediaId()));
 			params.add(new BasicNameValuePair("filename", msg.getFileName()));
 		}
-		params.add(new BasicNameValuePair("msgid", msg.getNewMsgId()));
+		params.add(new BasicNameValuePair("msgid", msg.getNewMsgId()+""));
 		params.add(new BasicNameValuePair("skey", (String) core.getLoginInfo().get("skey")));
 		HttpEntity entity = myHttpClient.doGet(url, params, true, headerMap);
 		try {

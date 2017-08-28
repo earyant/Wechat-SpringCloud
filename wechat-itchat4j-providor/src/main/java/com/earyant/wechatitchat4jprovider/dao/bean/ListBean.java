@@ -3,7 +3,10 @@ package com.earyant.wechatitchat4jprovider.dao.bean;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
 
 /**
  * Created by earyant on 2017 : 08 : 2017/8/15 : 14:12 : .
@@ -23,9 +26,8 @@ public class ListBean {
 
     private int Val;
 
-    @ManyToOne
-    SyncKeyBean syncKeyBean;
+
+    String syncKeyBeanId;
     @Id
-    @GeneratedValue
-    Long id;
+    String id;
 }

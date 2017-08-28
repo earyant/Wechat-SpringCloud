@@ -20,7 +20,4 @@ public class GroupName {
     @Column
     String name;
 
-    public GroupName(String name){
-        this.name = name;
-    }
 }

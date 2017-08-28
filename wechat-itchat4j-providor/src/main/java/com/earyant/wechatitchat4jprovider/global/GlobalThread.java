@@ -26,10 +26,6 @@ public class GlobalThread {
     Logger LOG = Logger.getLogger(GlobalThread.class.getName());
     @Autowired
     LoginServiceImpl loginService;
-//    @Autowired
-//    private StringRedisTemplate stringRedisTemplate;
-
-    //    @Override
     @Scheduled(fixedDelay = 6000000)
     public void run() {
         LOG.info("启动成功，正在检测状态");
@@ -49,33 +45,26 @@ public class GlobalThread {
                     if (!loginService.webWxInit(user.getWechatId())) {
                         LOG.info("6. wechat init excption");
                     }
-
                     LOG.info("6. start wechat notify");
                     loginService.wxStatusNotify(user.getWechatId());
-
                     LOG.info("7. clear。。。。");
                     CommonTools.clearScreen();
-                    LOG.info(String.format("welcome back， %s", user.getNickname()));
-
+                    LOG.info(String.format("welcome back， %s", user.getNickName()));
                     LOG.info("8. start receive message ");
                     loginService.startReceiving(user.getWechatId());
-
                     LOG.info("9. get contact message");
                     loginService.webWxGetContact(user.getWechatId());
-
                     LOG.info("10. get group and group list");
                     loginService.WebWxBatchGetContact(user.getWechatId());
-
                     LOG.info("11. cache friend message");
                     WechatTools.setUserInfo(); // 登陆成功后缓存本次登陆好友相关消息（NickName, UserName）
-
                     LOG.info("12.open wechat status tread");
                     new Thread(new CheckLoginStatusThread()).start();
                 } else {
                     je.rpush("user", JSON.toJSONString(user));
                 }
                 try {
-                    Thread.sleep(10000);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

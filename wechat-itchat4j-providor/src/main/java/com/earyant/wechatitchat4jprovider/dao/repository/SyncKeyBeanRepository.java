@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * WechatCloud  com.earyant.wechatitchat4jprovider.dao.repository
  */
 public interface SyncKeyBeanRepository extends JpaRepository<SyncKeyBean, Long> {
+    SyncKeyBean findOneByUserId(String userId);
 }

@@ -3,7 +3,7 @@ package com.earyant.wechatitchat4jprovider.itchat4j.utils.tools;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.earyant.wechatitchat4jprovider.itchat4j.beans.BaseMsg;
+import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.Config;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.OsNameEnum;
 import com.vdurmont.emoji.EmojiParser;
@@ -225,7 +225,7 @@ public class CommonTools {
      * @author https://github.com/yaphone
      * @date 2017年4月23日 下午2:39:04
      */
-    public static void emojiFormatter(BaseMsg d) {
+    public static void emojiFormatter(WebWxSync.AddMsgListBean d) {
         Matcher matcher = getMatcher("<span class=\"emoji emoji(.{1,10})\"></span>", d.getContent());
         StringBuilder sb = new StringBuilder();
         String content = d.getContent();
@@ -270,7 +270,7 @@ public class CommonTools {
 
     }
 
-    public static void msgContentFormatter(BaseMsg d) {
+    public static void msgContentFormatter(WebWxSync.AddMsgListBean d) {
         d.setContent(d.getContent().replace("<br/>", "\n"));
         emojiFormatter(d);
         // TODO 与emoji表情有部分兼容问题，目前暂未处理解码处理 d.put(k,

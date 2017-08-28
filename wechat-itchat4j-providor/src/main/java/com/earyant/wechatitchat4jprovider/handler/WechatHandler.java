@@ -1,9 +1,9 @@
 package com.earyant.wechatitchat4jprovider.handler;
 
+import com.earyant.wechatitchat4jprovider.dao.User;
+import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.api.MessageTools;
 import com.earyant.wechatitchat4jprovider.itchat4j.api.WechatTools;
-import com.earyant.wechatitchat4jprovider.itchat4j.beans.BaseMsg;
-import com.earyant.wechatitchat4jprovider.itchat4j.beans.RecommendInfo;
 import com.earyant.wechatitchat4jprovider.itchat4j.core.Core;
 import com.earyant.wechatitchat4jprovider.itchat4j.face.IMsgHandlerFace;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.MsgTypeEnum;
@@ -26,7 +26,7 @@ public class WechatHandler implements IMsgHandlerFace {
 	Logger LOG = Logger.getLogger(WechatHandler.class);
 
 	@Override
-	public String textMsgHandle(BaseMsg msg) {
+	public String textMsgHandle(WebWxSync.AddMsgListBean msg) {
 		// String docFilePath = "D:/itchat4j/pic/1.jpg"; // 这里是需要发送的文件的路径
 		if (!msg.isGroupMsg()) { // 群消息不处理
 			// String userId = msg.getString("FromUserName");
@@ -51,44 +51,44 @@ public class WechatHandler implements IMsgHandlerFace {
 	}
 
 	@Override
-	public String picMsgHandle(BaseMsg msg) {
+	public String picMsgHandle(WebWxSync.AddMsgListBean msg) {
 		String fileName = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());// 这里使用收到图片的时间作为文件名
-		String picPath = "D://itchat4j/pic" + File.separator + fileName + ".jpg"; // 调用此方法来保存图片
+		String picPath = "D://workspace/java/m/WechatCloud/wechat-itchat4j-providor/msg/pic" + File.separator + fileName + ".jpg"; // 调用此方法来保存图片
 		DownloadTools.getDownloadFn(msg, MsgTypeEnum.PIC.getType(), picPath); // 保存图片的路径
 		return "图片保存成功";
 	}
 
 	@Override
-	public String voiceMsgHandle(BaseMsg msg) {
+	public String voiceMsgHandle(WebWxSync.AddMsgListBean msg) {
 		String fileName = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
-		String voicePath = "D://itchat4j/voice" + File.separator + fileName + ".mp3";
+		String voicePath = "D://workspace/java/m/WechatCloud/wechat-itchat4j-providor/msg/voice" + File.separator + fileName + ".mp3";
 		DownloadTools.getDownloadFn(msg, MsgTypeEnum.VOICE.getType(), voicePath);
 		return "声音保存成功";
 	}
 
 	@Override
-	public String viedoMsgHandle(BaseMsg msg) {
+	public String viedoMsgHandle(WebWxSync.AddMsgListBean msg) {
 		String fileName = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss").format(new Date());
-		String viedoPath = "D://itchat4j/viedo" + File.separator + fileName + ".mp4";
+		String viedoPath = "D://workspace/java/m/WechatCloud/wechat-itchat4j-providor/msg/viedo" + File.separator + fileName + ".mp4";
 		DownloadTools.getDownloadFn(msg, MsgTypeEnum.VIEDO.getType(), viedoPath);
 		return "视频保存成功";
 	}
 
 	@Override
-	public String nameCardMsgHandle(BaseMsg msg) {
+	public String nameCardMsgHandle(WebWxSync.AddMsgListBean msg) {
 		return "收到名片消息";
 	}
 
 	@Override
-	public void sysMsgHandle(BaseMsg msg) { // 收到系统消息
+	public void sysMsgHandle(WebWxSync.AddMsgListBean msg) { // 收到系统消息
 		String text = msg.getContent();
 		LOG.info(text);
 	}
 
 	@Override
-	public String verifyAddFriendMsgHandle(BaseMsg msg) {
-		MessageTools.addFriend(msg, true); // 同意好友请求，false为不接受好友请求
-		RecommendInfo recommendInfo = msg.getRecommendInfo();
+	public String verifyAddFriendMsgHandle(WebWxSync.AddMsgListBean msg, User core) {
+		MessageTools.addFriend(msg, true,core); // 同意好友请求，false为不接受好友请求
+		WebWxSync.AddMsgListBean.RecommendInfoBean recommendInfo = msg.getRecommendInfo();
 		String nickName = recommendInfo.getNickName();
 		String province = recommendInfo.getProvince();
 		String city = recommendInfo.getCity();
@@ -97,9 +97,9 @@ public class WechatHandler implements IMsgHandlerFace {
 	}
 
 	@Override
-	public String mediaMsgHandle(BaseMsg msg) {
+	public String mediaMsgHandle(WebWxSync.AddMsgListBean msg) {
 		String fileName = msg.getFileName();
-		String filePath = "D://itchat4j/file" + File.separator + fileName; // 这里是需要保存收到的文件路径，文件可以是任何格式如PDF，WORD，EXCEL等。
+		String filePath = "D://workspace/java/m/WechatCloud/wechat-itchat4j-providor/msg/file" + File.separator + fileName; // 这里是需要保存收到的文件路径，文件可以是任何格式如PDF，WORD，EXCEL等。
 		DownloadTools.getDownloadFn(msg, MsgTypeEnum.MEDIA.getType(), filePath);
 		return "文件" + fileName + "保存成功";
 	}

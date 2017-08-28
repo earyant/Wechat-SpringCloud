@@ -2,7 +2,7 @@ package com.earyant.wechatitchat4jprovider.itchat4j.core;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.earyant.wechatitchat4jprovider.itchat4j.beans.BaseMsg;
+import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.MyHttpClient;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.parameters.BaseParaEnum;
 
@@ -31,7 +31,7 @@ public class Core {
 
     private String userName;
     private String nickName;
-    private List<BaseMsg> msgList = new ArrayList<BaseMsg>();
+    private List<WebWxSync.AddMsgListBean> msgList = new ArrayList<>();
 
     private JSONObject userSelf; // 登陆账号自身信息
     private List<JSONObject> memberList = new ArrayList<JSONObject>(); // 好友+群聊+公众号+特殊账号
@@ -129,11 +129,11 @@ public class Core {
         return myHttpClient;
     }
 
-    public List<BaseMsg> getMsgList() {
+    public List<WebWxSync.AddMsgListBean> getMsgList() {
         return msgList;
     }
 
-    public void setMsgList(List<BaseMsg> msgList) {
+    public void setMsgList(List<WebWxSync.AddMsgListBean> msgList) {
         this.msgList = msgList;
     }
 
@@ -249,11 +249,7 @@ public class Core {
      */
     public Map<String, Object> getParamMap() {
         return new HashMap<String, Object>(1) {
-            /**
-             *
-             */
             private static final long serialVersionUID = 1L;
-
             {
                 Map<String, String> map = new HashMap<String, String>();
                 for (BaseParaEnum baseRequest : BaseParaEnum.values()) {

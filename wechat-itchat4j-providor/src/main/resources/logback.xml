@@ -1,0 +1,43 @@
+<!--配置debug=true,从而打印任何内部状态下的信息-->
+<configuration debug="true">
+
+    <!--加载变量定义资源-->
+    <!--<property resource="commons.properties"/>-->
+
+    <!--配置ConsoleAppender实例-->
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%-5level %logger %C %M %d{MM/dd-HH:mm:ss.SSS} [%thread] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!--配置FileAppender实例-->
+    <appender name="file" class="ch.qos.logback.core.FileAppender">
+        <file>
+            ${filePath}
+        </file>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%-5level %logger %C %M %d{MM/dd-HH:mm:ss.SSS} [%thread] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!--&lt;!&ndash;配置DBAppender实例&ndash;&gt;-->
+    <!--<appender name="db" class="ch.qos.logback.classic.db.DBAppender">-->
+        <!--<connectionSource class="ch.qos.logback.core.db.DriverManagerConnectionSource">-->
+            <!--<driverClass>${driverClass}</driverClass>-->
+            <!--<url>${dbUrl}</url>-->
+            <!--<user>${dbUser}</user>-->
+            <!--<password>${dbPassword}</password>-->
+        <!--</connectionSource>-->
+    <!--</appender>-->
+
+    <!--可以通过<logger>标签，改变指定的Logger实例的Level值和绑定的Appender-->
+
+    <!--给名称为"ROOT"的特殊Logger实例绑定"console,file,db"这3个Appender，并设置它的Level值为"debug"-->
+    <!--在Logger实例层次结构中，该Logger实例处于最顶层，其下的子孙Logger实例会继承它的Level值和绑定的Appender，除非特别指定-->
+    <root level="info">
+        <appender-ref ref="console"/>
+        <appender-ref ref="file"/>
+        <!--<appender-ref ref="db"/>-->
+    </root>
+</configuration>

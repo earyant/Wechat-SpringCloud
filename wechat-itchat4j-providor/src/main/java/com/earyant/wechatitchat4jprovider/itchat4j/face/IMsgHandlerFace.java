@@ -1,6 +1,7 @@
 package com.earyant.wechatitchat4jprovider.itchat4j.face;
 
-import com.earyant.wechatitchat4jprovider.itchat4j.beans.BaseMsg;
+import com.earyant.wechatitchat4jprovider.dao.User;
+import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 
 /**
  * 消息处理接口
@@ -18,7 +19,7 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public String textMsgHandle(BaseMsg msg);
+	public String textMsgHandle(WebWxSync.AddMsgListBean msg);
 
 	/**
 	 * 处理图片消息
@@ -28,7 +29,7 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public String picMsgHandle(BaseMsg msg);
+	public String picMsgHandle(WebWxSync.AddMsgListBean msg);
 
 	/**
 	 * 处理声音消息
@@ -38,7 +39,7 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public String voiceMsgHandle(BaseMsg msg);
+	public String voiceMsgHandle(WebWxSync.AddMsgListBean msg);
 
 	/**
 	 * 处理小视频消息
@@ -48,7 +49,7 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public String viedoMsgHandle(BaseMsg msg);
+	public String viedoMsgHandle(WebWxSync.AddMsgListBean msg);
 
 	/**
 	 * 处理名片消息
@@ -58,7 +59,7 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public String nameCardMsgHandle(BaseMsg msg);
+	public String nameCardMsgHandle(WebWxSync.AddMsgListBean msg);
 
 	/**
 	 * 处理系统消息
@@ -68,7 +69,7 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public void sysMsgHandle(BaseMsg msg);
+	public void sysMsgHandle(WebWxSync.AddMsgListBean msg);
 
 	/**
 	 * 处理确认添加好友消息
@@ -77,7 +78,7 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public String verifyAddFriendMsgHandle(BaseMsg msg);
+	public String verifyAddFriendMsgHandle(WebWxSync.AddMsgListBean msg, User core);
 
 	/**
 	 * 处理收到的文件消息
@@ -86,6 +87,6 @@ public interface IMsgHandlerFace {
 	 * @param msg
 	 * @return
 	 */
-	public String mediaMsgHandle(BaseMsg msg);
+	public String mediaMsgHandle(WebWxSync.AddMsgListBean msg);
 
 }

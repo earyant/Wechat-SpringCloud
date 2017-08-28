@@ -2,11 +2,9 @@ package com.earyant.wechatitchat4jprovider.dao.bean;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.OneToOne;
+import javax.persistence.*;
 
 /**
  * Created by earyant on 2017 : 08 : 2017/8/15 : 14:07 : .
@@ -15,6 +13,7 @@ import javax.persistence.OneToOne;
 @NoArgsConstructor
 @Data
 @Entity
+@JsonIgnoreProperties
 public class BaseResponseBean {
     /**
      * Ret : 0
@@ -26,6 +25,4 @@ public class BaseResponseBean {
     Long id;
     private int Ret;
     private String ErrMsg;
-    @OneToOne
-    WechatinitBean wechatinitBean;
 }

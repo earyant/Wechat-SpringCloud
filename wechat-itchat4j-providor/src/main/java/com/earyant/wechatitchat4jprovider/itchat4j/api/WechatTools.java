@@ -3,6 +3,7 @@ package com.earyant.wechatitchat4jprovider.itchat4j.api;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.earyant.wechatitchat4jprovider.dao.User;
 import com.earyant.wechatitchat4jprovider.itchat4j.core.Core;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.StorageLoginInfoEnum;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.URLEnum;
@@ -39,8 +40,8 @@ public class WechatTools {
 	 * @param msg
 	 * @param toUserName
 	 */
-	public static void sendMsgByUserName(String msg, String toUserName) {
-		MessageTools.sendMsgById(msg, toUserName);
+	public static void sendMsgByUserName(String msg, String toUserName,User core) {
+		MessageTools.sendMsgById(msg, toUserName,core);
 	}
 
 	/**
@@ -55,7 +56,7 @@ public class WechatTools {
 	 * 
 	 * @author https://github.com/yaphone
 	 * @date 2017年5月4日 下午10:56:31
-	 * @param name
+
 	 * @return
 	 */
 	public static String getUserNameByNickName(String nickName) {
@@ -174,7 +175,7 @@ public class WechatTools {
 	 * 根据用户昵称设置备注名称
 	 * 
 	 * @date 2017年5月27日 上午12:21:40
-	 * @param userName
+	 * @param
 	 * @param remName
 	 */
 	public static void remarkNameByNickName(String nickName, String remName) {

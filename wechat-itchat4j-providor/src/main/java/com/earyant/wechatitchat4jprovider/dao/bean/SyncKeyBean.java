@@ -2,8 +2,11 @@ package com.earyant.wechatitchat4jprovider.dao.bean;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.codehaus.jackson.annotate.JsonProperty;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Transient;
 
 /**
  * Created by earyant on 2017 : 08 : 2017/8/15 : 14:08 : .
@@ -19,13 +22,10 @@ public class SyncKeyBean {
      */
 
     @Id
-    @GeneratedValue
-    Long id;
+    String id;
     private int Count;
-    @OneToMany(cascade = {CascadeType.PERSIST,CascadeType.ALL} )
+    @Transient
+    @JsonProperty("List")
     private java.util.List<ListBean> List;
-
-
-    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.ALL})
-    WechatinitBean wechatinitBean;
+    String userId;
 }
