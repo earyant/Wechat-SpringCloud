@@ -12,9 +12,7 @@ import com.earyant.wechatitchat4jprovider.itchat4j.utils.tools.CommonTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
 /**
@@ -38,10 +36,8 @@ public class MsgCenter {
      * @date 2017年4月23日 下午2:30:48
      */
     public static List<WebWxSync.AddMsgListBean> produceMsg(List<WebWxSync.AddMsgListBean> msgList, User core) {
-        List<WebWxSync.AddMsgListBean> result = new ArrayList<>();
-        for (int i = 0; i < msgList.size(); i++) {
+        msgList.forEach(m -> {
             JSONObject msg = new JSONObject();
-            WebWxSync.AddMsgListBean m = msgList.get(i);
             m.setGroupMsg(false);// 是否是群消息
             if (m.getFromUserName().contains("@@") || m.getToUserName().contains("@@")) { // 群聊消息
                 if (m.getFromUserName().contains("@@")
@@ -107,10 +103,10 @@ public class MsgCenter {
                 LOG.info("Useless msg");
             }
             LOG.info("accept a message ,from : " + m.getFromUserName());
-            result.add(m);
-        }
-        MsgCenter.handleMsg(result,core);
-        return result;
+//            result.add(m);
+        });
+        MsgCenter.handleMsg(msgList, core);
+        return msgList;
     }
 
     /**
@@ -121,47 +117,44 @@ public class MsgCenter {
      */
     public static void handleMsg(List<WebWxSync.AddMsgListBean> msgListBeans, User core) {
         IMsgHandlerFace msgHandler = new WechatHandler();
-            if (msgListBeans.size() > 0 && msgListBeans.get(0).getContent() != null) {
-                if (msgListBeans.get(0).getContent().length() > 0) {
-                    WebWxSync.AddMsgListBean msg = msgListBeans.get(0);
-                    if (msg.getType() != null) {
-                        try {
-                            if (msg.getType().equals(MsgTypeEnum.TEXT.getType())) {
-                                String result = msgHandler.textMsgHandle(msg);
-                                MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(),core);
-                            } else if (msg.getType().equals(MsgTypeEnum.PIC.getType())) {
-                                String result = msgHandler.picMsgHandle(msg);
-                                MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(),core);
-                            } else if (msg.getType().equals(MsgTypeEnum.VOICE.getType())) {
-                                String result = msgHandler.voiceMsgHandle(msg);
-                                MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(),core);
-                            } else if (msg.getType().equals(MsgTypeEnum.VIEDO.getType())) {
-                                String result = msgHandler.viedoMsgHandle(msg);
-                                MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(),core);
-                            } else if (msg.getType().equals(MsgTypeEnum.NAMECARD.getType())) {
-                                String result = msgHandler.nameCardMsgHandle(msg);
-                                MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(),core);
-                            } else if (msg.getType().equals(MsgTypeEnum.SYS.getType())) { // 系统消息
-                                msgHandler.sysMsgHandle(msg);
-                            } else if (msg.getType().equals(MsgTypeEnum.VERIFYMSG.getType())) { // 确认添加好友消息
-                                String result = msgHandler.verifyAddFriendMsgHandle(msg,core);
-                                MessageTools.sendMsgById(result,
-                                        msgListBeans.get(0).getRecommendInfo().getUserName(),core);
-                            } else if (msg.getType().equals(MsgTypeEnum.MEDIA.getType())) { // 多媒体消息
-                                String result = msgHandler.mediaMsgHandle(msg);
-                                MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(),core);
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
+        if (msgListBeans.size() > 0 && msgListBeans.get(0).getContent() != null) {
+            if (msgListBeans.get(0).getContent().length() > 0) {
+                WebWxSync.AddMsgListBean msg = msgListBeans.get(0);
+                if (msg.getType() != null) {
+                    try {
+                        if (msg.isGroupMsg()) {
+                            return;
                         }
+                        if (msg.getType().equals(MsgTypeEnum.TEXT.getType())) {
+                            String result = msgHandler.textMsgHandle(msg);
+                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                        } else if (msg.getType().equals(MsgTypeEnum.PIC.getType())) {
+                            String result = msgHandler.picMsgHandle(msg);
+                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                        } else if (msg.getType().equals(MsgTypeEnum.VOICE.getType())) {
+                            String result = msgHandler.voiceMsgHandle(msg);
+                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                        } else if (msg.getType().equals(MsgTypeEnum.VIEDO.getType())) {
+                            String result = msgHandler.viedoMsgHandle(msg);
+                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                        } else if (msg.getType().equals(MsgTypeEnum.NAMECARD.getType())) {
+                            String result = msgHandler.nameCardMsgHandle(msg);
+                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                        } else if (msg.getType().equals(MsgTypeEnum.SYS.getType())) { // 系统消息
+                            msgHandler.sysMsgHandle(msg);
+                        } else if (msg.getType().equals(MsgTypeEnum.VERIFYMSG.getType())) { // 确认添加好友消息
+                            String result = msgHandler.verifyAddFriendMsgHandle(msg, core);
+                            MessageTools.sendMsgById(result,
+                                    msgListBeans.get(0).getRecommendInfo().getUserName(), core);
+                        } else if (msg.getType().equals(MsgTypeEnum.MEDIA.getType())) { // 多媒体消息
+                            String result = msgHandler.mediaMsgHandle(msg);
+                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
-                msgListBeans.remove(0);
             }
-            try {
-                TimeUnit.MILLISECONDS.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        }
     }
 }

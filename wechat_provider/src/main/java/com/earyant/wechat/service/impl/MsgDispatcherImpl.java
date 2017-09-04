@@ -1,6 +1,5 @@
 package com.earyant.wechat.service.impl;
 
-import com.earyant.commentdatabase.redis.service.RedisServiceImpl;
 import com.earyant.wechat.message.resp.Article;
 import com.earyant.wechat.message.resp.NewsMessage;
 import com.earyant.wechat.message.resp.TextMessage;
@@ -9,6 +8,7 @@ import com.earyant.wechat.service.MsgDisPatcherService;
 import com.earyant.wechat.util.MessageUtil;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -36,15 +36,18 @@ public class MsgDispatcherImpl implements MsgDisPatcherService {
 
     @Autowired
     RestTemplate restTemplate;
+    //    @Autowired
+//    RedisServiceImpl redisService;
     @Autowired
-    RedisServiceImpl redisService;
+    StringRedisTemplate stringRedisTemplate;
 
     @Override
     public String processMessage(Map<String, String> map) throws Exception {
         String openid = map.get("FromUserName"); //用户openid
         String mpid = map.get("ToUserName");   //公众号原始ID
-        String token = (String) redisService.get("access_token_" + map.get("appid"));
-        map.put("access_token",token);
+        String token = stringRedisTemplate.opsForValue().get("access_token_" + map.get("appid"));
+//        String token = (String) redisService.get("access_token_" + map.get("appid"));
+        map.put("access_token", token);
         //普通文本消息
         TextMessage txtmsg = new TextMessage();
         txtmsg.setToUserName(openid);

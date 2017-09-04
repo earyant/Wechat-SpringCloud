@@ -7,6 +7,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Transient;
+import java.util.Date;
 
 /**
  * Created by earyant on 2017 : 08 : 2017/8/15 : 14:08 : .
@@ -28,4 +29,5 @@ public class SyncKeyBean {
     @JsonProperty("List")
     private java.util.List<ListBean> List;
     String userId;
+    Date createDate;
 }

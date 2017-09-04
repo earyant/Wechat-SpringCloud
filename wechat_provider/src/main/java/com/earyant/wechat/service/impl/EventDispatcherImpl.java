@@ -1,6 +1,7 @@
 package com.earyant.wechat.service.impl;
 
-import com.earyant.commentdatabase.redis.service.RedisServiceImpl;
+import com.earyant.gank.dao.AllContentBean;
+import com.earyant.gank.respository.AllContentBeanRespository;
 import com.earyant.token.service.WechatConfigService;
 import com.earyant.wechat.common.GetUseInfo;
 import com.earyant.wechat.message.resp.Article;
@@ -13,7 +14,9 @@ import com.earyant.wechat.util.MessageUtil;
 import net.sf.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 
 import java.util.*;
 
@@ -34,16 +37,20 @@ public class EventDispatcherImpl implements EventDisPatcherService {
 //    private DayMapper dayMapper;
 //    @Resource
 //    AllContentBeanMapper allContentBeanMapper;
-    @Autowired
-    RedisServiceImpl redisService;
+//    @Autowired
+//    RedisServiceImpl redisService;
     @Autowired
     WechatConfigService wechatConfigService;
     @Autowired
     GetUseInfo getUseInfo;
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
+    @Autowired
+    AllContentBeanRespository allContentBeanRespository;
 
     @Override
     public String processEvent(Map<String, String> map) throws Exception {
-        String token = (String) redisService.get("access_token_" + map.get("appid"));
+        String token = stringRedisTemplate.opsForValue().get("access_token_" + map.get("appid"));
         String openid = map.get("FromUserName"); // 用户openid
         String mpid = map.get("ToUserName"); // 公众号原始ID
         ImageMessage imgmsg = new ImageMessage();
@@ -60,11 +67,11 @@ public class EventDispatcherImpl implements EventDisPatcherService {
         if (map.get("Event").equals(MessageUtil.EVENT_TYPE_SUBSCRIBE)) { // 关注事件
 //			System.out.println("==============这是关注事件！");
             try {
-                HashMap<String, String> userinfo = getUseInfo.Openid_userinfo(openid, map.get("appid"));
+//                HashMap<String, String> userinfo = getUseInfo.Openid_userinfo(openid, map.get("appid"));
                 Article article = new Article();
                 article.setDescription("欢迎来到李睿的个人博客：菜鸟程序员成长之路！"); //图文消息的描述
-                article.setPicUrl(userinfo.get("headimgurl")); //图文消息图片地址
-                article.setTitle("尊敬的：" + userinfo.get("nickname") + ",你好！");  //图文消息标题
+                article.setPicUrl("https://images.unsplash.com/photo-1421986527537-888d998adb74?dpr=1&auto=format&fit=crop&w=1080&h=720&q=80&cs=tinysrgb&crop="); //图文消息图片地址
+                article.setTitle("你好！");  //图文消息标题
                 article.setUrl("earyant.github.io");  //图文url链接
                 List<Article> list = new ArrayList<Article>();
                 list.add(article);     //这里发送的是单图文，如果需要发送多图文则在这里list中加入多个Article即可！
@@ -79,7 +86,7 @@ public class EventDispatcherImpl implements EventDisPatcherService {
         }
 
         if (map.get("Event").equals(MessageUtil.EVENT_TYPE_UNSUBSCRIBE)) { // 取消关注事件
-//			System.out.println("==============这是取消关注事件！");
+			System.out.println("==============这是取消关注事件！"+openid+" 关注了");
         }
 
         if (map.get("Event").equals(MessageUtil.EVENT_TYPE_SCAN)) { // 扫描二维码事件
@@ -97,7 +104,7 @@ public class EventDispatcherImpl implements EventDisPatcherService {
         }
 
         if (map.get("Event").equals(MessageUtil.EVENT_TYPE_LOCATION)) { // 位置上报事件
-//			System.out.println("==============这是位置上报事件！");
+			System.out.println("==============这是位置上报事件！");
         }
 
         if (map.get("Event").equals(MessageUtil.EVENT_TYPE_CLICK)) { // 自定义菜单点击事件
@@ -142,7 +149,7 @@ public class EventDispatcherImpl implements EventDisPatcherService {
         }
 
         if (map.get("Event").equals(MessageUtil.EVENT_TYPE_VIEW)) { // 自定义菜单View事件
-//			System.out.println("==============这是自定义菜单View事件！");
+			System.out.println("==============这是自定义菜单View事件！");
         }
 
         return null;
@@ -153,47 +160,47 @@ public class EventDispatcherImpl implements EventDisPatcherService {
         //对图文消息
         newmsg.setCreateTime(new Date().getTime());
         newmsg.setMsgType(MessageUtil.RESP_MESSAGE_TYPE_NEWS);
-//        List<AllContentBeanWithBLOBs> allContentBeanWithBLOBs = allContentBeanMapper.selectByType(type);
-//        List<Article> list = new ArrayList<>();
-//        if (allContentBeanWithBLOBs.size() > 0) {
-////            logger.debug("数据库中Android消息的个数" + allContentBeanWithBLOBs.size());
-//            for (int i = 0; i < ((allContentBeanWithBLOBs.size() <= 9) ? allContentBeanWithBLOBs.size() : 9); i++) {
-//                AllContentBeanWithBLOBs allContentBeanWithBLOB = allContentBeanWithBLOBs.get(i);
-//                Article article = new Article();
-//                logger.info(allContentBeanWithBLOB.gettDesc());
-//                article.setDescription(allContentBeanWithBLOB.gettDesc()); //图文消息的描述
-//                if ("福利".equals(type) ) {
-//                    article.setPicUrl(allContentBeanWithBLOB.gettUrl());
-//                } else {
-//                    if (!ObjectUtils.isEmpty(allContentBeanWithBLOB.gettImages() )) {
-//                        try {
-////                        List<String> picUrls = JsonStringUtils.jsonStringToListString(allContentBeanWithBLOB.gettImages());
-//                            logger.info(allContentBeanWithBLOB.gettImages());
-//                            String[] picUrls = allContentBeanWithBLOB.gettImages().substring(1, allContentBeanWithBLOB.gettImages().length() - 1).split(",");
-//                            if (picUrls.length > 0) {
-//                                article.setPicUrl(picUrls[0]); //图文消息图片地址
-//                            } else {
-//                                article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
-//                            }
-//                        } catch (Exception e) {
-//                            e.printStackTrace();
-//                            article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
-//                        }
-//                    } else {
-//                        article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
-//                    }
-//                }
-//                article.setTitle(allContentBeanWithBLOB.gettDesc());  //图文消息标题
-//                article.setUrl(allContentBeanWithBLOB.gettUrl());  //图文url链接
-//                list.add(article);     //这里发送的是单图文，如果需要发送多图文则在这里list中加入多个Article即可！
-//            }
-//        } else {
+        List<AllContentBean> allContentBeanWithBLOBs = allContentBeanRespository.findByTType(type);
+        List<Article> list = new ArrayList<>();
+        if (allContentBeanWithBLOBs.size() > 0) {
+//            logger.debug("数据库中Android消息的个数" + allContentBeanWithBLOBs.size());
+            for (int i = 0; i < ((allContentBeanWithBLOBs.size() <= 8) ? allContentBeanWithBLOBs.size() : 8); i++) {
+                AllContentBean allContentBeanWithBLOB = allContentBeanWithBLOBs.get(i);
+                Article article = new Article();
+                logger.info(allContentBeanWithBLOB.getTDesc());
+                article.setDescription(allContentBeanWithBLOB.getTDesc()); //图文消息的描述
+                if ("福利".equals(type) ) {
+                    article.setPicUrl(allContentBeanWithBLOB.getTUrl());
+                } else {
+                    if (!ObjectUtils.isEmpty(allContentBeanWithBLOB.getTImages() )) {
+                        try {
+//                        List<String> picUrls = JsonStringUtils.jsonStringToListString(allContentBeanWithBLOB.gettImages());
+                            logger.info(allContentBeanWithBLOB.getTImages());
+                            String[] picUrls = allContentBeanWithBLOB.getTImages().substring(1, allContentBeanWithBLOB.getTImages().length() - 1).split(",");
+                            if (picUrls.length > 0) {
+                                article.setPicUrl(picUrls[0]); //图文消息图片地址
+                            } else {
+                                article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
+                        }
+                    } else {
+                        article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
+                    }
+                }
+                article.setTitle(allContentBeanWithBLOB.getTDesc());  //图文消息标题
+                article.setUrl(allContentBeanWithBLOB.getTUrl());  //图文url链接
+                list.add(article);     //这里发送的是单图文，如果需要发送多图文则在这里list中加入多个Article即可！
+            }
+        } else {
 //            return null;
         logger.info("没有任何数据。。。");
-//            list.add(new Article("没有找到数据","没有找到您需求的数据","http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg",""));
-//        }
-//        newmsg.setArticleCount(list.size());
-//        newmsg.setArticles(list);
+            list.add(new Article("没有找到数据","没有找到您需求的数据","http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg",""));
+        }
+        newmsg.setArticleCount(list.size());
+        newmsg.setArticles(list);
         return MessageUtil.newsMessageToXml(newmsg);
 
     }
@@ -203,40 +210,40 @@ public class EventDispatcherImpl implements EventDisPatcherService {
         //对图文消息
         newmsg.setCreateTime(new Date().getTime());
         newmsg.setMsgType(MessageUtil.RESP_MESSAGE_TYPE_NEWS);
-//        List<AllContentBeanWithBLOBs> allContentBeanWithBLOBs = allContentBeanMapper.selectByDate(date + "%");
-//        List<Article> list = new ArrayList<Article>();
-//        if (allContentBeanWithBLOBs.size() > 0) {
-////            logger.debug("数据库中Android消息的个数" + allContentBeanWithBLOBs.size());
-//            for (int i = 0; i < ((allContentBeanWithBLOBs.size() <= 9) ? allContentBeanWithBLOBs.size() : 9); i++) {
-//                AllContentBeanWithBLOBs allContentBeanWithBLOB = allContentBeanWithBLOBs.get(i);
-//                Article article = new Article();
-//                article.setDescription(allContentBeanWithBLOB.gettDesc()); //图文消息的描述
-//                if (null != allContentBeanWithBLOB.gettImages() && !"".equals(allContentBeanWithBLOB.gettImages())) {
-//                    try {
-//                        String[] picUrls = allContentBeanWithBLOB.gettImages().substring(1, allContentBeanWithBLOB.gettImages().length() - 1).split(",");
-//                        if (picUrls.length > 0) {
-//                            article.setPicUrl(picUrls[0]); //图文消息图片地址
-//                        } else {
-//                            article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
-//                        }
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                        article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
-//                    } finally {
-//                    }
-//                } else {
-//                    article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
-//                }
-//                article.setTitle(allContentBeanWithBLOB.gettDesc());  //图文消息标题
-//                article.setUrl(allContentBeanWithBLOB.gettUrl());  //图文url链接
-//                list.add(article);     //这里发送的是单图文，如果需要发送多图文则在这里list中加入多个Article即可！
-//            }
-//        } else {
-//            logger.info("没有任何数据。。。");
-//            return "没有任何数据。。。";
-//        }
-//        newmsg.setArticleCount(list.size());
-//        newmsg.setArticles(list);
+        List<AllContentBean> allContentBeanWithBLOBs = allContentBeanRespository.findByTCreatedatLike(date + "%");
+        List<Article> list = new ArrayList<Article>();
+        if (allContentBeanWithBLOBs.size() > 0) {
+//            logger.debug("数据库中Android消息的个数" + allContentBeanWithBLOBs.size());
+            for (int i = 0; i < ((allContentBeanWithBLOBs.size() <= 8) ? allContentBeanWithBLOBs.size() : 8); i++) {
+                AllContentBean allContentBeanWithBLOB = allContentBeanWithBLOBs.get(i);
+                Article article = new Article();
+                article.setDescription(allContentBeanWithBLOB.getTDesc()); //图文消息的描述
+                if (null != allContentBeanWithBLOB.getTImages() && !"".equals(allContentBeanWithBLOB.getTImages())) {
+                    try {
+                        String[] picUrls = allContentBeanWithBLOB.getTImages().substring(1, allContentBeanWithBLOB.getTImages().length() - 1).split(",");
+                        if (picUrls.length > 0) {
+                            article.setPicUrl(picUrls[0]); //图文消息图片地址
+                        } else {
+                            article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
+                    } finally {
+                    }
+                } else {
+                    article.setPicUrl("http://ww2.sinaimg.cn/large/610dc034jw1f9vyl2fqi0j20u011habc.jpg");
+                }
+                article.setTitle(allContentBeanWithBLOB.getTDesc());  //图文消息标题
+                article.setUrl(allContentBeanWithBLOB.getTUrl());  //图文url链接
+                list.add(article);     //这里发送的是单图文，如果需要发送多图文则在这里list中加入多个Article即可！
+            }
+        } else {
+            logger.info("没有任何数据。。。");
+            return "没有任何数据。。。";
+        }
+        newmsg.setArticleCount(list.size());
+        newmsg.setArticles(list);
         return MessageUtil.newsMessageToXml(newmsg);
     }
 

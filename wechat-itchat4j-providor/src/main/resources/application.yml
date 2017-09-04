@@ -4,6 +4,11 @@ server:
     uri-encoding: utf-8
 
 spring:
+  http:
+    encoding:
+      force: true
+      charset: UTF-8
+      enabled: true
   application:
     name: wechat-itchat-provider
   redis:
@@ -12,10 +17,11 @@ spring:
         database: 0
         max-active: 8
   datasource:
-    url: jdbc:mysql://localhost:3306/wechat?amp&useOldAliasMetadataBehavior\=true&amp&zeroDateTimeBehavior\=convertToNull&serverTimezone=UTC&createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/wechat?amp&useOldAliasMetadataBehavior\=true&amp&zeroDateTimeBehavior\=convertToNull&serverTimezone=UTC&createDatabaseIfNotExist=true&useSSL=false
     username: root
     password: 23769263
     driver-class-name: com.mysql.jdbc.Driver
+
 
   jpa:
 #      show-sql: true
@@ -40,7 +46,3 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/  # ?????????eureka-server
-
-
-
-

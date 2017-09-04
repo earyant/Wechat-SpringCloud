@@ -205,14 +205,17 @@ public class LoginServiceImpl implements ILoginService {
             String userId = core.getUuid();
             user.setId(userId);
             core.setInviteStartCount(jsonRootBean.getInviteStartCount());
-
             userRepository.save(user);
+            //联系人信息。
             List<ContactListBean> contactListBean = jsonRootBean.getContactList();
+//            同步信息的key
             SyncKeyBean syncKeyBean = jsonRootBean.getSyncKey();
             syncKeyBean.setId(userId);
             syncKeyBean.setUserId(userId);
+            syncKeyBean.setCreateDate(new Date());
             syncKeyBeanRepository.save(syncKeyBean);
             core.setSyncKey(syncKeyBean);
+//            同步信息key中的list
             List<ListBean> listBeans = syncKeyBean.getList();
             listBeans.forEach(listBean -> {
                 listBean.setSyncKeyBeanId(userId);
@@ -222,9 +225,16 @@ public class LoginServiceImpl implements ILoginService {
             contactListBean.forEach(contactListBean1 -> {
                 contactListBean1.setUserId(userId);
                 try {
+//                    将联系人的信息改成utf-8模式的
                     contactListBean1.setNickName(new String(contactListBean1.getNickName().getBytes(), "utf8"));
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
+                }
+                if (contactListBean1.getMemberCount() > 0) {
+                    contactListBean1.getMemberList().forEach(contactListBean2 -> {
+                        contactListBean2.setGroupName(contactListBean1.getNickName());
+                    });
+                    contactListBeanRepository.save(contactListBean1.getMemberList());
                 }
 
             });
@@ -333,8 +343,8 @@ public class LoginServiceImpl implements ILoginService {
                                     try {
                                         List<WebWxSync.AddMsgListBean> msgList;
                                         msgList = msgObj.getAddMsgList();
+//                                        消息处理
                                         msgList = MsgCenter.produceMsg(msgList, core);
-                                        core.setMsgList(msgList);
                                         msgList.forEach(msg -> {
                                             WebWxSync.AddMsgListBean.RecommendInfoBean recommendInfo = msg.getRecommendInfo();
                                             msg = addMsgListBeanRepository.save(msg);
@@ -629,6 +639,20 @@ public class LoginServiceImpl implements ILoginService {
             jsonRootBean = JSONUtils.parser(text, WebWxSync.class);
             if (jsonRootBean.getBaseResponse().getRet() != 0) {
             } else {
+
+                //把返回的syncKey 保存下来。 每次同步新信息是通过上次返回的Synckey进行获取。一定要保存。
+                SyncKeyBean syncKeyBeanBack = jsonRootBean.getSyncKey();
+                syncKeyBeanBack.setId(core.getId());
+                syncKeyBeanBack.setUserId(core.getId());
+                syncKeyBeanBack.setCreateDate(new Date());
+                syncKeyBeanRepository.save(syncKeyBeanBack);
+                List<ListBean> listBeansBack = syncKeyBeanBack.getList();
+                listBeanRepository.delete(listBeans);
+                listBeansBack.forEach(listBean2 -> {
+                    listBean2.setSyncKeyBeanId(core.getId());
+                    listBean2.setId(core.getId() + new Random());
+                    listBeanRepository.save(listBean2);
+                });
                 core.setSyncKey(jsonRootBean.getSyncCheckKey());
                 List<ListBean> syncArray = jsonRootBean.getSyncKey().getList();
                 StringBuilder sb = new StringBuilder();
@@ -655,7 +679,8 @@ public class LoginServiceImpl implements ILoginService {
      * @author https://github.com/yaphone
      * @date 2017年4月16日 上午11:11:34
      */
-    private Map<String, String> syncCheck(User core) {
+    private Map<String, String> syncCheck(User user) {
+        User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(user.getWechatId());
         Map<String, String> resultMap = new HashMap<>();
         // 组装请求URL和参数
         String url = core.getSyncUrl() + URLEnum.SYNC_CHECK_URL.getUrl();

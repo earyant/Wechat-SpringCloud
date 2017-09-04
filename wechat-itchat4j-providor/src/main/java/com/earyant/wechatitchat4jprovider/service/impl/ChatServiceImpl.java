@@ -73,6 +73,7 @@ public class ChatServiceImpl implements ChatService {
             }
         }
         String token = map.get("access_token");
+//        LOG.info("token   " + token);
         imageMessage.setImage(new Image());
         Image img = new Image();
         HttpPostUploadUtil util = new HttpPostUploadUtil(token);

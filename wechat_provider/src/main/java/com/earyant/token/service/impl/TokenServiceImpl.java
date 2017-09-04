@@ -1,6 +1,5 @@
 package com.earyant.token.service.impl;
 
-import com.earyant.commentdatabase.redis.service.RedisServiceImpl;
 import com.earyant.token.repostity.Token;
 import com.earyant.token.repostity.TokenRepsitory;
 import com.earyant.token.service.TokenService;
@@ -10,6 +9,7 @@ import net.sf.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ClassName: WeChatTaskImpl
@@ -33,10 +34,12 @@ public class TokenServiceImpl implements TokenService {
     TokenRepsitory tokenRepsitory;
     @Autowired
     RestTemplate restTemplate;
-    @Autowired
-    RedisServiceImpl redisService;
+//    @Autowired
+//    RedisServiceImpl<String> redisService;
     @Autowired
     WechatConfigService wechatConfigService;
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
 
     /**
      * @param @throws Exception
@@ -66,7 +69,9 @@ public class TokenServiceImpl implements TokenService {
             logger.info(o.getAppid() + "    id   token :::" + jstoken);
             String access_token = JSONObject.fromObject(jstoken).getString(
                     "access_token"); // 获取到token并赋值保存
-            redisService.put("access_token_" + o.getAppid(), access_token, 7200);
+//            redisService.put("access_token_" + o.getAppid(), access_token, 7200);
+            stringRedisTemplate.opsForValue().set("access_token_" + o.getAppid(), access_token);
+            stringRedisTemplate.expire("access_token_" + o.getAppid(),7200, TimeUnit.SECONDS);
             //获取jsticket的执行体
 //            params.clear();
 //            params.put("access_token", access_token);

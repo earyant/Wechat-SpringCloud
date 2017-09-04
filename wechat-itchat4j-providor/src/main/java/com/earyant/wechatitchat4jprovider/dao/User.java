@@ -53,7 +53,7 @@ public class User implements Serializable {
      * SnsFlag : 17
      */
 
-    private int Uin;
+    private Long Uin;
     private String UserName;
     private String NickName;
     private String HeadImgUrl;
@@ -75,10 +75,10 @@ public class User implements Serializable {
 
     @Id
 //    @GeneratedValue
-    String id;
+            String id;
     @Column(name = "Sync_Keys")
     String synckey;
-//    @OneToMany(cascade = {CascadeType.ALL})
+    //    @OneToMany(cascade = {CascadeType.ALL})
 //    @JoinTable(name = "user_contact", joinColumns = {
 //            @JoinColumn(name = "user_ID", referencedColumnName = "ID")}, inverseJoinColumns = {
 //            @JoinColumn(name = "contact_ID", referencedColumnName = "ID")})
@@ -141,8 +141,9 @@ public class User implements Serializable {
     List<String> groupIdList = new ArrayList<>();
 
 
-    @OneToMany(cascade = {CascadeType.ALL})
-    public List<WebWxSync.AddMsgListBean> msgList;
+    //    @OneToMany(cascade = {CascadeType.ALL})
+    @Transient
+    public List<WebWxSync.AddMsgListBean> msgList = new ArrayList<>();
 
     @OneToOne
     private User userSelf; // 登陆账号自身信息
@@ -168,7 +169,7 @@ public class User implements Serializable {
     private List<String> groupNickNameList = new ArrayList<>(); // 群NickName列表
     //    @OneToMany(cascade = {CascadeType.ALL})
     @Transient
-    private List<ContactListBean> groupList;
+    private List<ContactListBean> groupList = new ArrayList<>();
 
     @Column
     String fileUrl;

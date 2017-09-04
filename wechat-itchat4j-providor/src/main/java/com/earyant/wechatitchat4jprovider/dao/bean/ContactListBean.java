@@ -3,7 +3,10 @@ package com.earyant.wechatitchat4jprovider.dao.bean;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Transient;
 import java.util.List;
 
 /**
@@ -70,7 +73,7 @@ public class ContactListBean {
     private int StarFriend;
     private int AppAccountFlag;
     private int Statues;
-    private int AttrStatus;
+    private Long AttrStatus;
     private String Province;
     private String City;
     private String Alias;
@@ -81,9 +84,10 @@ public class ContactListBean {
     private String KeyWord;
     private String EncryChatRoomId;
     private int IsOwner;
-    @ManyToMany
+    @Transient
     private List<ContactListBean> MemberList;
     String userId;
+    String groupName;
 //    @OneToMany
 //    User user;
 }

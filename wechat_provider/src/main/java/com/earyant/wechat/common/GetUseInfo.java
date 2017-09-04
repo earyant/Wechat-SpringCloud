@@ -1,10 +1,10 @@
 package com.earyant.wechat.common;
 
-import com.earyant.commentdatabase.redis.service.RedisServiceImpl;
 import com.earyant.token.service.WechatConfigService;
 import com.earyant.wechat.util.HttpUtils;
 import net.sf.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -20,8 +20,10 @@ import java.util.HashMap;
 public class GetUseInfo {
     @Autowired
     WechatConfigService wechatConfigService;
+//    @Autowired
+//    RedisServiceImpl redisService;
     @Autowired
-    RedisServiceImpl redisService;
+    StringRedisTemplate stringRedisTemplate;
 
     /**
      * @param @param  openid
@@ -35,7 +37,7 @@ public class GetUseInfo {
     public HashMap<String, String> Openid_userinfo(String openid, String appid)
             throws Exception {
         HashMap<String, String> params = new HashMap<String, String>();
-        params.put("access_token", (String) redisService.get("access_token_" + appid));  //定时器中获取到的token
+        params.put("access_token", stringRedisTemplate.opsForValue().get("access_token_" + appid));  //定时器中获取到的token
 //		System.out.println(GlobalConstants.getInterfaceUrl("access_token"));
         params.put("openid", openid);  //需要获取的用户的openid
         params.put("lang", "zh_CN");
