@@ -3,6 +3,7 @@ package com.earyant.wechatitchat4jprovider.itchat4j.api;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.earyant.wechatitchat4jprovider.dao.User;
+import com.earyant.wechatitchat4jprovider.dao.repository.RecommendInfoBeanRepository;
 import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.Config;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.MyHttpClient;
@@ -17,6 +18,8 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
@@ -30,8 +33,14 @@ import java.util.*;
  * @version 1.0
  * @date 创建时间：2017年4月23日 下午2:30:37
  */
+@Component
 public class MessageTools {
-    private static Logger LOG = LoggerFactory.getLogger(MessageTools.class);
+    private Logger LOG = LoggerFactory.getLogger(MessageTools.class);
+
+    @Autowired
+    RecommendInfoBeanRepository recommendInfoBeanRepository;
+    @Autowired
+    WechatTools wechatTools;
 
     /**
      * 根据UserName发送文本消息
@@ -40,7 +49,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月4日 下午11:17:38
      */
-    private static void sendMsg(String text, String toUserName, User core) {
+    private void sendMsg(String text, String toUserName, User core) {
         if (text == null) {
             return;
         }
@@ -56,7 +65,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月6日 上午11:45:51
      */
-    public static void sendMsgById(String text, String id,User core) {
+    public void sendMsgById(String text, String id, User core) {
         if (text == null) {
             return;
         }
@@ -71,9 +80,9 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月4日 下午11:17:38
      */
-    public static boolean sendMsgByNickName(String text, String nickName, User core) {
+    public boolean sendMsgByNickName(String text, String nickName, User core) {
         if (nickName != null) {
-            String toUserName = WechatTools.getUserNameByNickName(nickName);
+            String toUserName = wechatTools.getUserNameByNickName(nickName);
             if (toUserName != null) {
                 webWxSendMsg(1, text, toUserName, core);
                 return true;
@@ -92,7 +101,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年4月23日 下午2:32:02
      */
-    public static void webWxSendMsg(int msgType, String content, String toUserName, User core) {
+    public void webWxSendMsg(int msgType, String content, String toUserName, User core) {
         String url = String.format(URLEnum.WEB_WX_SEND_MSG.getUrl(), core.getUrl());
         Map<String, Object> msgMap = new HashMap<String, Object>();
         msgMap.put("Type", msgType);
@@ -122,7 +131,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月7日 上午12:41:13
      */
-    private static JSONObject webWxUploadMedia(String filePath, User core) {
+    private JSONObject webWxUploadMedia(String filePath, User core) {
         File f = new File(filePath);
         if (!f.exists() && f.isFile()) {
             LOG.info("file is not exist");
@@ -190,8 +199,8 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月7日 下午10:32:45
      */
-    public static boolean sendPicMsgByNickName(String nickName, String filePath, User core) {
-        String toUserName = WechatTools.getUserNameByNickName(nickName);
+    public boolean sendPicMsgByNickName(String nickName, String filePath, User core) {
+        String toUserName = wechatTools.getUserNameByNickName(nickName);
         if (toUserName != null) {
             return sendPicMsgByUserId(toUserName, filePath, core);
         }
@@ -206,7 +215,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月7日 下午10:34:24
      */
-    public static boolean sendPicMsgByUserId(String userId, String filePath, User core) {
+    public boolean sendPicMsgByUserId(String userId, String filePath, User core) {
         JSONObject responseObj = webWxUploadMedia(filePath, core);
         if (responseObj != null) {
             String mediaId = responseObj.getString("MediaId");
@@ -224,7 +233,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月7日 下午10:38:55
      */
-    private static boolean webWxSendMsgImg(String userId, String mediaId, User core) {
+    private boolean webWxSendMsgImg(String userId, String mediaId, User core) {
         String url = String.format("%s/webwxsendmsgimg?fun=async&f=json&pass_ticket=%s", core.getUrl(),
                 core.getPass_ticket());
         Map<String, Object> msgMap = new HashMap<String, Object>();
@@ -263,7 +272,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月7日 下午11:57:36
      */
-    public static boolean sendFileMsgByUserId(String userId, String filePath, User core) {
+    public boolean sendFileMsgByUserId(String userId, String filePath, User core) {
         String title = new File(filePath).getName();
         Map<String, String> data = new HashMap<String, String>();
         data.put("appid", Config.API_WXAPPID);
@@ -291,8 +300,8 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月10日 下午10:59:27
      */
-    public static boolean sendFileMsgByNickName(String nickName, String filePath, User core) {
-        String toUserName = WechatTools.getUserNameByNickName(nickName);
+    public boolean sendFileMsgByNickName(String nickName, String filePath, User core) {
+        String toUserName = wechatTools.getUserNameByNickName(nickName);
         if (toUserName != null) {
             return sendFileMsgByUserId(toUserName, filePath, core);
         }
@@ -308,7 +317,7 @@ public class MessageTools {
      * @author https://github.com/yaphone
      * @date 2017年5月10日 上午12:21:28
      */
-    private static boolean webWxSendAppMsg(String userId, Map<String, String> data, User core) {
+    private boolean webWxSendAppMsg(String userId, Map<String, String> data, User core) {
         String url = String.format("%s/webwxsendappmsg?fun=async&f=json&pass_ticket=%s", core.getUrl(),
                 core.getPass_ticket());
         String clientMsgId = String.valueOf(new Date().getTime())
@@ -320,12 +329,12 @@ public class MessageTools {
         Map<String, Object> msgMap = new HashMap<String, Object>();
         msgMap.put("Type", data.get("type"));
         msgMap.put("Content", content);
-        msgMap.put("FromUserName", core.getUserSelf().getUserName());
+        msgMap.put("FromUserName", core.getUserName());
         msgMap.put("ToUserName", userId);
         msgMap.put("LocalID", clientMsgId);
         msgMap.put("ClientMsgId", clientMsgId);
         /*
-		 * Map<String, Object> paramMap = new HashMap<String, Object>();
+         * Map<String, Object> paramMap = new HashMap<String, Object>();
 		 * 
 		 * @SuppressWarnings("unchecked") Map<String, Map<String, String>>
 		 * baseRequestMap = (Map<String, Map<String, String>>)
@@ -357,7 +366,7 @@ public class MessageTools {
      * @param accept
      * @date 2017年6月29日 下午10:08:43
      */
-    public static void addFriend(WebWxSync.AddMsgListBean msg, boolean accept, User core) {
+    public void addFriend(WebWxSync.AddMsgListBean msg, boolean accept, User core) {
         if (!accept) { // 不添加
             return;
         }
@@ -367,7 +376,8 @@ public class MessageTools {
         String ticket = recommendInfo.getTicket();
         // 更新好友列表
         // TODO 此处需要更新好友列表
-        // core.getContactList().add(msg.getJSONObject("RecommendInfo"));
+//        core.getContactList().add();
+        recommendInfoBeanRepository.save(recommendInfo);
 
         String url = String.format(URLEnum.WEB_WX_VERIFYUSER.getUrl(), core.getUrl(),
                 String.valueOf(System.currentTimeMillis() / 3158L), core.getPass_ticket());

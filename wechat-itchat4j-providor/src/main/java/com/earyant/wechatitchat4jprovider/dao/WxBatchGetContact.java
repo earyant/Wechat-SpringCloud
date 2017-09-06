@@ -1,5 +1,6 @@
 package com.earyant.wechatitchat4jprovider.dao;
 
+import com.earyant.wechatitchat4jprovider.dao.bean.ContactListBean;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -33,75 +34,5 @@ public class WxBatchGetContact {
 
         private int Ret;
         private String ErrMsg;
-    }
-
-    @NoArgsConstructor
-    @Data
-    public static class ContactListBean {
-        /**
-         * Uin : 0
-         * UserName : @4c5d308c1ce095918da5bf61fbe5d003586a6c9b8534ef729cf91702a4d20f94
-         * NickName : 忙啪聛氓庐垄氓鈥βモ€郝�
-         * HeadImgUrl : /cgi-bin/mmwebwx-bin/webwxgeticon?seq=679450712&username=@4c5d308c1ce095918da5bf61fbe5d003586a6c9b8534ef729cf91702a4d20f94&skey=
-         * ContactFlag : 3
-         * MemberCount : 0
-         * MemberList : []
-         * RemarkName :
-         * HideInputBarFlag : 0
-         * Sex : 0
-         * Signature : 莽鈥澛ε韭伱ヂ⒚р€犆р€櫭寂捗柯矫嘎ぢ铰犆ε撯偓盲赂聧氓聫炉茅鈥濃劉猫驴鈥∶♀€灻р€樏ε犫偓氓艙藛茫鈧€毭ε撯€懊ヂ柯┾€斅幻ｂ偓聛盲鹿鸥忙艙鈥懊β磁久伱尖€好ε撯€懊ㄢ€炩€樏β磁久ｂ偓聛盲鹿鸥忙艙鈥懊︹偓聺猫鈧捗ｂ偓鈥�
-         * VerifyFlag : 24
-         * OwnerUin : 0
-         * PYInitial : JKGY
-         * PYQuanPin : jikegongyuan
-         * RemarkPYInitial :
-         * RemarkPYQuanPin :
-         * StarFriend : 0
-         * AppAccountFlag : 0
-         * Statues : 0
-         * AttrStatus : 3
-         * Province : 氓艗鈥斆ぢ郝�
-         * City : 忙艙聺茅藴鲁
-         * Alias :
-         * SnsFlag : 0
-         * UniFriend : 0
-         * DisplayName :
-         * ChatRoomId : 0
-         * KeyWord :
-         * EncryChatRoomId : 0
-         * IsOwner : 0
-         */
-
-        private int Uin;
-        private String UserName;
-        private String NickName;
-        private String HeadImgUrl;
-        private int ContactFlag;
-        private int MemberCount;
-        private String RemarkName;
-        private int HideInputBarFlag;
-        private int Sex;
-        private String Signature;
-        private int VerifyFlag;
-        private int OwnerUin;
-        private String PYInitial;
-        private String PYQuanPin;
-        private String RemarkPYInitial;
-        private String RemarkPYQuanPin;
-        private int StarFriend;
-        private int AppAccountFlag;
-        private int Statues;
-        private int AttrStatus;
-        private String Province;
-        private String City;
-        private String Alias;
-        private int SnsFlag;
-        private int UniFriend;
-        private String DisplayName;
-        private int ChatRoomId;
-        private String KeyWord;
-        private String EncryChatRoomId;
-        private int IsOwner;
-        private List<?> MemberList;
     }
 }

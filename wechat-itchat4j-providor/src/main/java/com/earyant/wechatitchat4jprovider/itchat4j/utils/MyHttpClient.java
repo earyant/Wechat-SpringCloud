@@ -94,7 +94,6 @@ public class MyHttpClient {
 			Map<String, String> headerMap) {
 		HttpEntity entity = null;
 		HttpGet httpGet = new HttpGet();
-
 		try {
 			if (params != null) {
 				String paramStr = EntityUtils.toString(new UrlEncodedFormEntity(params, Consts.UTF_8));

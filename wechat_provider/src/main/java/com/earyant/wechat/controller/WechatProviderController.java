@@ -92,7 +92,7 @@ public class WechatProviderController {
     @PostMapping("/processMessage")
     public String processMessage(@RequestBody HashMap<String, String> map) throws Exception {
         String resultMsg = msgDisPatcherService.processMessage(map); //进入消息处理
-        System.out.println("resultMsg   " + resultMsg);
+//        System.out.println("resultMsg   " + resultMsg);
         return resultMsg;
     }
 

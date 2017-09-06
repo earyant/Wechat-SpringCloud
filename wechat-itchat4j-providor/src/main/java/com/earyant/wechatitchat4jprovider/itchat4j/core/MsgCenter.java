@@ -1,7 +1,9 @@
 package com.earyant.wechatitchat4jprovider.itchat4j.core;
 
 import com.alibaba.fastjson.JSONObject;
+import com.earyant.wechatitchat4jprovider.dao.GroupName;
 import com.earyant.wechatitchat4jprovider.dao.User;
+import com.earyant.wechatitchat4jprovider.dao.repository.GroupNameRepository;
 import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.handler.WechatHandler;
 import com.earyant.wechatitchat4jprovider.itchat4j.api.MessageTools;
@@ -9,8 +11,11 @@ import com.earyant.wechatitchat4jprovider.itchat4j.face.IMsgHandlerFace;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.MsgCodeEnum;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.MsgTypeEnum;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.tools.CommonTools;
+import com.earyant.wechatitchat4jprovider.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -22,10 +27,15 @@ import java.util.regex.Matcher;
  * @version 1.0
  * @date 创建时间：2017年5月14日 下午12:47:50
  */
+@Component
 public class MsgCenter {
     private static Logger LOG = LoggerFactory.getLogger(MsgCenter.class);
 
+    @Autowired
+    GroupNameRepository groupNameRepository;
 
+    @Autowired
+    MessageTools messageTools;
     /**
      * 接收消息，放入队列
      *
@@ -35,18 +45,31 @@ public class MsgCenter {
      * @author https://github.com/yaphone
      * @date 2017年4月23日 下午2:30:48
      */
-    public static List<WebWxSync.AddMsgListBean> produceMsg(List<WebWxSync.AddMsgListBean> msgList, User core) {
+    public List<WebWxSync.AddMsgListBean> produceMsg(List<WebWxSync.AddMsgListBean> msgList, User core) {
+        List<GroupName> groupNameList = groupNameRepository.findAllById(core.getId());
         msgList.forEach(m -> {
             JSONObject msg = new JSONObject();
             m.setGroupMsg(false);// 是否是群消息
             if (m.getFromUserName().contains("@@") || m.getToUserName().contains("@@")) { // 群聊消息
-                if (m.getFromUserName().contains("@@")
-                        && !core.getGroupIdList().contains(m.getFromUserName())) {
-                    core.getGroupIdList().add((m.getFromUserName()));
-                } else if (m.getToUserName().contains("@@")
-                        && !core.getGroupIdList().contains(m.getToUserName())) {
-                    core.getGroupIdList().add((m.getToUserName()));
-                }
+                WebWxSync.AddMsgListBean finalM = m;
+                groupNameList.forEach(groupName -> {
+                    if (finalM.getFromUserName().contains("@@")
+                            && !groupName.getIds().contains(finalM.getFromUserName())
+                            ) {
+//                        core.getGroupIdList().add((finalM.getFromUserName()));
+                        GroupName groupName1 = new GroupName();
+                        groupName1.setId(core.getId());
+                        groupName1.setIds(finalM.getFromUserName());
+                        groupNameRepository.save(groupName1);
+                    } else if (finalM.getToUserName().contains("@@")
+                            && !groupName.getIds().contains(finalM.getToUserName())) {
+                        GroupName groupName1 = new GroupName();
+                        groupName1.setId(core.getId());
+                        groupName1.setIds(finalM.getToUserName());
+                        groupNameRepository.save(groupName1);
+                    }
+                });
+
                 // 群消息与普通消息不同的是在其消息体（Content）中会包含发送者id及":<br/>"消息，这里需要处理一下，去掉多余信息，只保留消息内容
                 if (m.getContent().contains("<br/>")) {
                     String content = m.getContent().substring(m.getContent().indexOf("<br/>") + 5);
@@ -54,7 +77,7 @@ public class MsgCenter {
                     m.setGroupMsg(true);
                 }
             } else {
-                CommonTools.msgContentFormatter(m);
+                m = CommonTools.msgContentFormatter(m);
             }
             if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_TEXT.getCode())) { // words
                 // 文本消息
@@ -80,7 +103,7 @@ public class MsgCenter {
                 m.setType(MsgTypeEnum.VOICE.getType());
             } else if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_VERIFYMSG.getCode())) {// friends
                 // 好友确认消息
-                // MessageTools.addFriend(core, userName, 3, ticket); // 确认添加好友
+                // messageTools.addFriend(core, userName, 3, ticket); // 确认添加好友
                 m.setType(MsgTypeEnum.VERIFYMSG.getType());
 
             } else if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_SHARECARD.getCode())) { // 共享名片
@@ -94,7 +117,6 @@ public class MsgCenter {
             } else if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_STATUSNOTIFY.getCode())) {// phone
                 // init
                 // 微信初始化消息
-
             } else if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_SYS.getCode())) {// 系统消息
                 m.setType(MsgTypeEnum.SYS.getType());
             } else if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_RECALLED.getCode())) { // 撤回消息
@@ -102,10 +124,9 @@ public class MsgCenter {
             } else {
                 LOG.info("Useless msg");
             }
-            LOG.info("accept a message ,from : " + m.getFromUserName());
-//            result.add(m);
+            LOG.info("accept a message  " + msgList.get(0).getContent() + " ,from : " + m.getFromUserName());
         });
-        MsgCenter.handleMsg(msgList, core);
+        handleMsg(msgList, core);
         return msgList;
     }
 
@@ -115,7 +136,7 @@ public class MsgCenter {
      * @author https://github.com/yaphone
      * @date 2017年5月14日 上午10:52:34
      */
-    public static void handleMsg(List<WebWxSync.AddMsgListBean> msgListBeans, User core) {
+    public void handleMsg(List<WebWxSync.AddMsgListBean> msgListBeans, User core) {
         IMsgHandlerFace msgHandler = new WechatHandler();
         if (msgListBeans.size() > 0 && msgListBeans.get(0).getContent() != null) {
             if (msgListBeans.get(0).getContent().length() > 0) {
@@ -127,28 +148,29 @@ public class MsgCenter {
                         }
                         if (msg.getType().equals(MsgTypeEnum.TEXT.getType())) {
                             String result = msgHandler.textMsgHandle(msg);
-                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            if (!StringUtils.isEmail(result)) {
+                                messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            }
                         } else if (msg.getType().equals(MsgTypeEnum.PIC.getType())) {
                             String result = msgHandler.picMsgHandle(msg);
-                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
                         } else if (msg.getType().equals(MsgTypeEnum.VOICE.getType())) {
                             String result = msgHandler.voiceMsgHandle(msg);
-                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
                         } else if (msg.getType().equals(MsgTypeEnum.VIEDO.getType())) {
                             String result = msgHandler.viedoMsgHandle(msg);
-                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
                         } else if (msg.getType().equals(MsgTypeEnum.NAMECARD.getType())) {
                             String result = msgHandler.nameCardMsgHandle(msg);
-                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
                         } else if (msg.getType().equals(MsgTypeEnum.SYS.getType())) { // 系统消息
                             msgHandler.sysMsgHandle(msg);
                         } else if (msg.getType().equals(MsgTypeEnum.VERIFYMSG.getType())) { // 确认添加好友消息
                             String result = msgHandler.verifyAddFriendMsgHandle(msg, core);
-                            MessageTools.sendMsgById(result,
-                                    msgListBeans.get(0).getRecommendInfo().getUserName(), core);
+//                            messageTools.sendMsgById(result,msgListBeans.get(0).getRecommendInfo().getUserName(), core);
                         } else if (msg.getType().equals(MsgTypeEnum.MEDIA.getType())) { // 多媒体消息
                             String result = msgHandler.mediaMsgHandle(msg);
-                            MessageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
                         }
                     } catch (Exception e) {
                         e.printStackTrace();

@@ -32,8 +32,6 @@ public class ChatController {
     String beginChat(HttpServletRequest request, String userId, @RequestBody HashMap<String, String> map) {
         System.setProperty("jsse.enableSNIExtension", "false"); // 防止SSL错误
         String path = request.getServletContext().getRealPath("") + "loginQrImg";
-
-
         return chatService.chat(map, path);
     }
 

@@ -4,7 +4,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Transient;
 import java.util.List;
@@ -52,8 +51,7 @@ public class ContactListBean {
      */
 
     @Id
-    @GeneratedValue
-    Long id;
+    String id;
     private int Uin;
     private String UserName;
     private String NickName;
@@ -88,6 +86,7 @@ public class ContactListBean {
     private List<ContactListBean> MemberList;
     String userId;
     String groupName;
+    boolean special;
 //    @OneToMany
 //    User user;
 }

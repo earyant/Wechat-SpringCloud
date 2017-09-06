@@ -35,11 +35,12 @@ public interface ILoginService {
      * 获取二维码图片
      *
      * @param qrPath
+     * @param uuid
      * @return
      * @author https://github.com/yaphone
      * @date 2017年5月13日 上午12:13:51
      */
-    String getQR(String qrPath, String wechatId);
+    String getQR(String qrPath, String wechatId, String uuid);
 
     /**
      * web初始化

@@ -5,7 +5,6 @@ import com.earyant.wechatitchat4jprovider.dao.User;
 import com.earyant.wechatitchat4jprovider.itchat4j.api.WechatTools;
 import com.earyant.wechatitchat4jprovider.itchat4j.service.impl.LoginServiceImpl;
 import com.earyant.wechatitchat4jprovider.itchat4j.thread.CheckLoginStatusThread;
-import com.earyant.wechatitchat4jprovider.itchat4j.utils.tools.CommonTools;
 import com.earyant.wechatitchat4jprovider.utils.JedisUtil;
 import com.earyant.wechatitchat4jprovider.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,8 +46,8 @@ public class GlobalThread {
                     }
                     LOG.info("6. start wechat notify");
                     loginService.wxStatusNotify(user.getWechatId());
-                    LOG.info("7. clear。。。。");
-                    CommonTools.clearScreen();
+//                    LOG.info("7. clear。。。。");
+//                    CommonTools.clearScreen();
                     LOG.info(String.format("welcome back， %s", user.getNickName()));
                     LOG.info("8. start receive message ");
                     loginService.startReceiving(user.getWechatId());
@@ -56,8 +55,8 @@ public class GlobalThread {
                     loginService.webWxGetContact(user.getWechatId());
                     LOG.info("10. get group and group list");
                     loginService.WebWxBatchGetContact(user.getWechatId());
-                    LOG.info("11. cache friend message");
-                    WechatTools.setUserInfo(); // 登陆成功后缓存本次登陆好友相关消息（NickName, UserName）
+//                    LOG.info("11. cache friend message");
+//                    WechatTools.setUserInfo(); // 登陆成功后缓存本次登陆好友相关消息（NickName, UserName）
                     LOG.info("12.open wechat status tread");
                     new Thread(new CheckLoginStatusThread()).start();
                 } else {

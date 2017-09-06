@@ -14,6 +14,7 @@ import net.sf.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
@@ -33,6 +34,8 @@ public class ChatServiceImpl implements ChatService {
     private ILoginService loginService;
     @Autowired
     UserInfoRepository userRepository;
+    @Autowired
+    StringRedisTemplate stringRedisTemplate;
 
     @Override
     public String chat(Map<String, String> map, String path) {
@@ -50,30 +53,28 @@ public class ChatServiceImpl implements ChatService {
         }
         String qrPath = path; // 保存登陆二维码图片的路径，这里需要在本地新建目录
         IMsgHandlerFace msgHandler = new WechatHandler(); // 实现IMsgHandlerFace接口的类
-        LOG.info("Start handler message!");
         String qr_path = "";
-
         for (int count = 0; count < 10; count++) {
             LOG.info("get UUID");
-            String uuid = "";
-            while (loginService.getUuid(openid) == null) {
+            String uuid = loginService.getUuid(openid);
+            if ( uuid== null) {
                 LOG.info("1. get wechat UUID");
                 while (loginService.getUuid(openid) == null) {
                     LOG.warn("1.1. get wechat UUID失败，2 second retry");
-                    SleepUtils.sleep(2000);
+                    SleepUtils.sleep(1000);
                 }
             }
             LOG.info("2. get login qr img");
-            qr_path = loginService.getQR(qrPath, openid);
+            qr_path = loginService.getQR(qrPath, openid,uuid);
             if (!ObjectUtils.isEmpty(qr_path)) {
                 break;
-            } else if (count == 10) {
-                LOG.error("2.2.  get login qr img, system out");
-                qr_path = "出现错误，请重试";
+//            } else if (count == 2) {
+//                stringRedisTemplate.opsForValue().get("user");
+//                LOG.error("2.2.  get login qr img, system out");
+//                qr_path = "出现错误，请重试";
             }
         }
         String token = map.get("access_token");
-//        LOG.info("token   " + token);
         imageMessage.setImage(new Image());
         Image img = new Image();
         HttpPostUploadUtil util = new HttpPostUploadUtil(token);

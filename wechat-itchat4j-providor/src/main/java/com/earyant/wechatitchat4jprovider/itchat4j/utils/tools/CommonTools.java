@@ -221,11 +221,10 @@ public class CommonTools {
      * 处理emoji表情
      *
      * @param d
-
      * @author https://github.com/yaphone
      * @date 2017年4月23日 下午2:39:04
      */
-    public static void emojiFormatter(WebWxSync.AddMsgListBean d) {
+    public static WebWxSync.AddMsgListBean emojiFormatter(WebWxSync.AddMsgListBean d) {
         Matcher matcher = getMatcher("<span class=\"emoji emoji(.{1,10})\"></span>", d.getContent());
         StringBuilder sb = new StringBuilder();
         String content = d.getContent();
@@ -251,7 +250,7 @@ public class CommonTools {
         } else {
             d.setContent(content);
         }
-
+        return d;
     }
 
     /**
@@ -270,9 +269,9 @@ public class CommonTools {
 
     }
 
-    public static void msgContentFormatter(WebWxSync.AddMsgListBean d) {
+    public static WebWxSync.AddMsgListBean msgContentFormatter(WebWxSync.AddMsgListBean d) {
         d.setContent(d.getContent().replace("<br/>", "\n"));
-        emojiFormatter(d);
+        return emojiFormatter(d);
         // TODO 与emoji表情有部分兼容问题，目前暂未处理解码处理 d.put(k,
         // StringEscapeUtils.unescapeHtml4(d.getString(k)));
 

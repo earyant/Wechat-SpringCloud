@@ -119,6 +119,8 @@ public class User implements Serializable {
 
     @OneToOne(cascade = {CascadeType.PERSIST})
     WechatinitBean wechatinitBean;
+    @Transient
+    private HashMap<String,List<ContactListBean>>  groupMemeberMap = new HashMap<>();
 
     public SyncKeyBean getSyncKey() {
         return SyncKey;
@@ -137,23 +139,23 @@ public class User implements Serializable {
     }
 
     //    @OneToMany(cascade={CascadeType.PERSIST})
-    @Transient
-    List<String> groupIdList = new ArrayList<>();
+//    @Transient
+//    List<String> groupIdList = new ArrayList<>();
 
 
     //    @OneToMany(cascade = {CascadeType.ALL})
     @Transient
     public List<WebWxSync.AddMsgListBean> msgList = new ArrayList<>();
 
-    @OneToOne
-    private User userSelf; // 登陆账号自身信息
+//    @OneToOne
+//    private User userSelf; // 登陆账号自身信息
 
 
-    @OneToMany(cascade = {CascadeType.ALL})
-    @JoinTable(name = "user_contact", joinColumns = {
-            @JoinColumn(name = "user_id", referencedColumnName = "ID")}, inverseJoinColumns = {
-            @JoinColumn(name = "contact_id", referencedColumnName = "ID")})
-    private List<Contact> memberList;
+//    @OneToMany(cascade = {CascadeType.ALL})
+//    @JoinTable(name = "user_contact", joinColumns = {
+//            @JoinColumn(name = "user_id", referencedColumnName = "ID")}, inverseJoinColumns = {
+//            @JoinColumn(name = "contact_id", referencedColumnName = "ID")})
+//    private List<Contact> memberList;
 
     @Column
     int receivingRetryCount = 5;
@@ -200,5 +202,9 @@ public class User implements Serializable {
         HashMap<String, Object> result = new HashMap<>();
         result.put("BaseRequest", map);
         return result;
+    }
+
+    public HashMap<String,List<ContactListBean>> getGroupMemeberMap() {
+        return groupMemeberMap;
     }
 }

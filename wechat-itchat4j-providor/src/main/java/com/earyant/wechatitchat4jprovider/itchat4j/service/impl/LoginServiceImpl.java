@@ -1,12 +1,14 @@
 package com.earyant.wechatitchat4jprovider.itchat4j.service.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.earyant.wechatitchat4jprovider.dao.GroupName;
 import com.earyant.wechatitchat4jprovider.dao.User;
 import com.earyant.wechatitchat4jprovider.dao.WxBatchGetContact;
-import com.earyant.wechatitchat4jprovider.dao.bean.*;
+import com.earyant.wechatitchat4jprovider.dao.bean.ContactListBean;
+import com.earyant.wechatitchat4jprovider.dao.bean.ListBean;
+import com.earyant.wechatitchat4jprovider.dao.bean.SyncKeyBean;
 import com.earyant.wechatitchat4jprovider.dao.bean.WXGetContact.GetContctBean;
+import com.earyant.wechatitchat4jprovider.dao.bean.WechatinitBean;
 import com.earyant.wechatitchat4jprovider.dao.repository.*;
 import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.core.MsgCenter;
@@ -82,6 +84,11 @@ public class LoginServiceImpl implements ILoginService {
     AddMsgListBeanRepository addMsgListBeanRepository;
     @Autowired
     RecommendInfoBeanRepository recommendInfoBeanRepository;
+    @Autowired
+    GroupNameRepository groupNameRepository;
+
+    @Autowired
+    MsgCenter msgCenter;
 
     @Override
     public boolean login(User user) {
@@ -112,7 +119,6 @@ public class LoginServiceImpl implements ILoginService {
             if (ResultEnum.WAIT_CONFIRM.getCode().equals(status)) {
                 LOG.info("please click Login Button");
             }
-
         } catch (Exception e) {
             LOG.error("login error！", e);
         }
@@ -133,13 +139,11 @@ public class LoginServiceImpl implements ILoginService {
         params.add(new BasicNameValuePair(UUIDParaEnum.FUN.para(), UUIDParaEnum.FUN.value()));
         params.add(new BasicNameValuePair(UUIDParaEnum.LANG.para(), UUIDParaEnum.LANG.value()));
         params.add(new BasicNameValuePair(UUIDParaEnum._.para(), String.valueOf(System.currentTimeMillis())));
-
         MyHttpClient myHttpClient = MyHttpClient.getInstance();
         HttpEntity entity = myHttpClient.doGet(URLEnum.UUID_URL.getUrl(), params, true, null);
-
         try {
             String result = EntityUtils.toString(entity);
-//            System.out.println("get qr result   " + result);
+            System.out.println("get qr result   " + result);
             String regEx = "window.QRLogin.code = (\\d+); window.QRLogin.uuid = \"(\\S+?)\";";
             Matcher matcher = CommonTools.getMatcher(regEx, result);
             if (matcher.find()) {
@@ -157,15 +161,13 @@ public class LoginServiceImpl implements ILoginService {
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
-
         return user.getUuid();
     }
 
     @Override
-    public String getQR(String qrPath, String wechatId) {
-        User user = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
+    public String getQR(String qrPath, String wechatId, String uuid) {
         qrPath = qrPath + File.separator + "QR.jpg";
-        String qrUrl = URLEnum.QRCODE_URL.getUrl() + user.getUuid();
+        String qrUrl = URLEnum.QRCODE_URL.getUrl() + uuid;
         MyHttpClient myHttpClient = MyHttpClient.getInstance();
         HttpEntity entity = myHttpClient.doGet(qrUrl, null, true, null);
         try {
@@ -200,7 +202,7 @@ public class LoginServiceImpl implements ILoginService {
 //            LOG.info("webWxInit: result:   " + result);
             WechatinitBean jsonRootBean = JSONUtils.parser(result, WechatinitBean.class);
             //保存获取到的user信息
-            WxInitBean wxInitBean = JSONUtils.parser(result, WxInitBean.class);
+//            WxInitBean wxInitBean = JSONUtils.parser(result, WxInitBean.class);
             User user = jsonRootBean.getUser();
             String userId = core.getUuid();
             user.setId(userId);
@@ -208,7 +210,7 @@ public class LoginServiceImpl implements ILoginService {
             userRepository.save(user);
             //联系人信息。
             List<ContactListBean> contactListBean = jsonRootBean.getContactList();
-//            同步信息的key
+//          同步信息的key
             SyncKeyBean syncKeyBean = jsonRootBean.getSyncKey();
             syncKeyBean.setId(userId);
             syncKeyBean.setUserId(userId);
@@ -224,6 +226,8 @@ public class LoginServiceImpl implements ILoginService {
             listBeanRepository.save(listBeans);
             contactListBean.forEach(contactListBean1 -> {
                 contactListBean1.setUserId(userId);
+                contactListBean1.setId(contactListBean1.getPYInitial() + contactListBean1.getPYQuanPin());
+                contactListBean1.setGroupName(contactListBean1.getPYInitial() + contactListBean1.getPYQuanPin());
                 try {
 //                    将联系人的信息改成utf-8模式的
                     contactListBean1.setNickName(new String(contactListBean1.getNickName().getBytes(), "utf8"));
@@ -232,6 +236,7 @@ public class LoginServiceImpl implements ILoginService {
                 }
                 if (contactListBean1.getMemberCount() > 0) {
                     contactListBean1.getMemberList().forEach(contactListBean2 -> {
+                        contactListBean2.setId(contactListBean2.getPYInitial() + contactListBean2.getPYQuanPin());
                         contactListBean2.setGroupName(contactListBean1.getNickName());
                     });
                     contactListBeanRepository.save(contactListBean1.getMemberList());
@@ -253,32 +258,41 @@ public class LoginServiceImpl implements ILoginService {
             core.setSynckey(synckey.substring(0, synckey.length() - 1));// 1_656161336|2_656161626|3_656161313|11_656159955|13_656120033|201_1492273724|1000_1492265953|1001_1492250432|1004_1491805192
             core.setUserName(user.getUserName());
             core.setNickName(user.getNickName());
-            core.setUserSelf(jsonRootBean.getUser());
+//            core.setUserSelf(jsonRootBean.getUser());
 
             String chatSet = jsonRootBean.getChatSet();
             System.out.println("chatSet ::   " + chatSet);
             String[] chatSetArray = chatSet.split(",");
-            List<String> groupNames = new ArrayList<>();
+            List<GroupName> groupNames = new ArrayList<>();
             for (int i = 0; i < chatSetArray.length; i++) {
                 if (chatSetArray[i].contains("@@")) {
                     // 更新GroupIdList
-                    groupNames.add(chatSetArray[i]);
+                    GroupName groupName = new GroupName();
+                    groupName.setIds(chatSetArray[i]);
+                    groupName.setId(userId);
+                    groupNames.add(groupName);
+
                 }
             }
-            core.getGroupIdList().addAll(groupNames);
+            List<GroupName> groupNameList = new ArrayList<>();
+            groupNameList.addAll(groupNames);
             core.setId(core.getUuid());
             userRepository.save(core);
-            List<ContactListBean> contactListArray = jsonRootBean.getContactList();
-            for (int i = 0; i < contactListArray.size(); i++) {
-                ContactListBean o = contactListArray.get(i);
-                if (o.getUserName().contains("@@")) {
+            groupNameRepository.save(groupNameList);
 
-                    core.getGroupIdList().add(o.getUserName()); //
-                    // 更新GroupIdList
-                    core.getGroupList().add(o); // 更新GroupList
-                    core.getGroupNickNameList().add(o.getNickName());
-                }
-            }
+
+//            List<ContactListBean> contactListArray = jsonRootBean.getContactList();
+//            for (int i = 0; i < contactListArray.size(); i++) {
+//                ContactListBean o = contactListArray.get(i);
+//                if (o.getUserName().contains("@@")) {
+//                    GroupName groupName = new GroupName();
+//                    groupName.setIds(nam);
+//                    groupNameList.add(); //
+//                    // 更新GroupIdList
+//                    core.getGroupList().add(o); // 更新GroupList
+//                    core.getGroupNickNameList().add(o.getNickName());
+//                }
+//            }
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -344,7 +358,7 @@ public class LoginServiceImpl implements ILoginService {
                                         List<WebWxSync.AddMsgListBean> msgList;
                                         msgList = msgObj.getAddMsgList();
 //                                        消息处理
-                                        msgList = MsgCenter.produceMsg(msgList, core);
+                                        msgList = msgCenter.produceMsg(msgList, core);
                                         msgList.forEach(msg -> {
                                             WebWxSync.AddMsgListBean.RecommendInfoBean recommendInfo = msg.getRecommendInfo();
                                             msg = addMsgListBeanRepository.save(msg);
@@ -368,7 +382,7 @@ public class LoginServiceImpl implements ILoginService {
                                         List<WebWxSync.AddMsgListBean> msgList;
                                         msgList = msgObj.getAddMsgList();
                                         List<ContactListBean> modContactList = msgObj.getModContactList(); // 存在删除或者新增的好友信息
-                                        msgList = MsgCenter.produceMsg(msgList, core);
+                                        msgList = msgCenter.produceMsg(msgList, core);
                                         for (int j = 0; j < msgList.size(); j++) {
                                             ContactListBean userInfo = modContactList.get(j);
                                             core.getContactlist().add(userInfo);
@@ -406,6 +420,7 @@ public class LoginServiceImpl implements ILoginService {
 
     }
 
+
     @Override
     public void webWxGetContact(String wechatId) {
         User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
@@ -418,6 +433,7 @@ public class LoginServiceImpl implements ILoginService {
         try {
             String result = EntityUtils.toString(entity, Consts.UTF_8);
             GetContctBean getContctBean = JSONUtils.parser(result, GetContctBean.class);
+//            System.out.println("webWxGetContact    " + result);
             // 查看seq是否为0，0表示好友列表已全部获取完毕，若大于0，则表示好友列表未获取完毕，当前的字节数（断点续传）
             Long seq = 0L;
             long currentTime = 0L;
@@ -426,8 +442,17 @@ public class LoginServiceImpl implements ILoginService {
                 seq = getContctBean.getSeq();
                 currentTime = new Date().getTime();
             }
+            getContctBean.getMemberList().forEach(member -> {
+                String id = member.getPYInitial() + member.getPYQuanPin();
+                if (id == null || id == "") {
+                    id = member.getUserName();
+                }
+                member.setId(id);
+                contactListBeanRepository.save(member);
+            });
+
             core.setMemberCount(getContctBean.getMemberCount());
-            List<ContactListBean> member = getContctBean.getMemberList();
+            List<ContactListBean> contactListBean = new ArrayList<>();
             // 循环获取seq直到为0，即获取全部好友列表 ==0：好友获取完毕 >0：好友未获取完毕，此时seq为已获取的字节数
             while (seq > 0) {
                 // 设置seq传参
@@ -443,29 +468,45 @@ public class LoginServiceImpl implements ILoginService {
                     seq = getContctBean.getSeq();
                     currentTime = new Date().getTime();
                 }
-
-                // 累加好友列表
-                member.addAll(getContctBean.getMemberList());
+                contactListBean = getContctBean.getMemberList();
+                contactListBean.forEach(me -> {
+                    String id = (me.getPYInitial() + me.getPYQuanPin());
+                    if (id == null || id == "") {
+                        id = me.getUserName();
+                    }
+                    me.setId(id);
+                });
+                System.out.println("错误的数据： " + contactListBean.toString());
+                contactListBeanRepository.save(contactListBean);
             }
-            contactListBeanRepository.save(member);
-            core.setMemberCount(member.size());
-            for (Iterator<?> iterator = member.iterator(); iterator.hasNext(); ) {
-                ContactListBean o = (ContactListBean) iterator.next();
+
+            core.setMemberCount(contactListBean.size());
+            List<GroupName> groupNameList = groupNameRepository.findAllById(core.getId());
+            for (ContactListBean o : contactListBean) {
                 if ((o.getVerifyFlag() & 8) != 0) { // 公众号/服务号
                     core.getPublicUsersList().add(o);
                 } else if (Config.API_SPECIAL_USER.contains(o.getUserName())) { // 特殊账号
-                    core.getSpecialUsersList().add(o);
+                    o.setSpecial(true);
                 } else if (o.getUserName().contains("@@")) { // 群聊
-                    if (!core.getGroupIdList().contains(o.getUserName())) {
-                        core.getGroupNickNameList().add(o.getNickName());
-                        core.getGroupIdList().add(o.getUserName());
-                        core.getGroupList().add(o);
-                    }
+                    groupNameList.forEach(groupName -> {
+                        if (!groupName.getIds().contains(o.getUserName())) {
+                            groupName.setGroupNickName(o.getNickName());
+                            groupName.setNames(o.getNickName());
+                            groupNameList.add(groupName);
+                            groupNameRepository.save(groupName);
+                        }
+                    });
 //                } else if (o.getUserName().equals(core.getUserSelf().getUsername())) { // 自己
 //                    core.getContactlist().remove(o);
                 } else { // 普通联系人
-                    core.getContactlist().add(o);
+//                    core.getContactlist().add(o);
+                    String id = o.getPYInitial() + o.getPYQuanPin();
+                    if (id == null || id == "") {
+                        id = o.getUserName();
+                    }
+                    o.setId(id);
                 }
+                contactListBeanRepository.save(o);
             }
             return;
         } catch (Exception e) {
@@ -477,16 +518,16 @@ public class LoginServiceImpl implements ILoginService {
     @Override
     public void WebWxBatchGetContact(String wechatId) {
         User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
-
+        List<GroupName> groupNameList = groupNameRepository.findAllById(core.getId());
         String url = String.format(URLEnum.WEB_WX_BATCH_GET_CONTACT.getUrl(),
                 core.getUrl(), new Date().getTime(),
                 core.getPass_ticket());
         Map<String, Object> paramMap = core.getParamMap();
-        paramMap.put("Count", core.getGroupIdList() == null ? 0 : core.getGroupIdList().size());
+        paramMap.put("Count", groupNameList == null ? 0 : groupNameList.size());
         List<Map<String, String>> list = new ArrayList<Map<String, String>>();
-        for (int i = 0; i < core.getGroupIdList().size(); i++) {
+        for (int i = 0; i < groupNameList.size(); i++) {
             HashMap<String, String> map = new HashMap<>();
-            map.put("UserName", core.getGroupIdList().get(i)); //TODO 以后再改
+            map.put("UserName", groupNameList.get(i).getIds()); //TODO 以后再改
             map.put("EncryChatRoomId", "");
             list.add(map);
         }
@@ -496,17 +537,22 @@ public class LoginServiceImpl implements ILoginService {
         try {
             String text = EntityUtils.toString(entity, Consts.UTF_8);
             WxBatchGetContact wxBatchGetContact = JSONUtils.parser(text, WxBatchGetContact.class);
+//TODO WebWxBatchGetContact  没有数据
             LOG.info("WebWxBatchGetContact:::   " + text);
-            JSONObject obj = JSON.parseObject(text);
-            JSONArray contactList = obj.getJSONArray("ContactList");
-//            for (int i = 0; i < contactList.size(); i++) { // 群好友
-//                if (contactList.getJSONObject(i).getString("UserName").indexOf("@@") > -1) { // 群
-//                    core.getGroupNickNameList().add(contactList.getJSONObject(i).getString("NickName")); // 更新群昵称列表
-//                    core.getGroupList().add(contactList.getJSONObject(i)); // 更新群信息（所有）列表
-//                    core.getGroupMemeberMap().put(contactList.getJSONObject(i).getString("UserName"),
-//                            contactList.getJSONObject(i).getJSONArray("MemberList")); // 更新群成员Map
-//                }
-//            }
+//            JSONObject obj = JSON.parseObject(text);
+            List<ContactListBean> contactList = wxBatchGetContact.getContactList();
+            contactList.forEach(contactListBean -> {
+                contactListBean.setId(contactListBean.getPYInitial() + contactListBean.getPYQuanPin());
+            });
+            contactListBeanRepository.save(contactList);
+            for (int i = 0; i < contactList.size(); i++) { // 群好友
+                if (contactList.get(i).getUserName().indexOf("@@") > -1) { // 群
+                    core.getGroupNickNameList().add(contactList.get(i).getNickName()); // 更新群昵称列表
+                    core.getGroupList().add(contactList.get(i)); // 更新群信息（所有）列表
+                    core.getGroupMemeberMap().put(contactList.get(i).getUserName(),
+                            contactList.get(i).getMemberList()); // 更新群成员Map
+                }
+            }
         } catch (Exception e) {
             LOG.info(e.getMessage());
         }
@@ -575,6 +621,14 @@ public class LoginServiceImpl implements ILoginService {
                 LOG.info(e.getMessage());
                 return core;
             }
+            //add by 默非默 2017-08-01 22:28:09
+            //如果登录被禁止时，则登录返回的message内容不为空，下面代码则判断登录内容是否为空，不为空则退出程序
+            String msg = getLoginMessage(text);
+            if (!"".equals(msg)){
+                LOG.info(msg);
+//                System.exit(0);
+                return null;
+            }
             Document doc = CommonTools.xmlParser(text);
             LOG.info("doc:: " + doc.getDocumentURI() + "   " + doc.getInputEncoding() + "   " + doc.getXmlEncoding() + "   " + doc.getXmlVersion());
             if (doc != null) {
@@ -597,7 +651,19 @@ public class LoginServiceImpl implements ILoginService {
         return core;
     }
 
-
+    /**
+     * 解析登录返回的消息，如果成功登录，则message为空
+     * @param result
+     * @return
+     */
+    public String getLoginMessage(String result){
+        String[] strArr = result.split("<message>");
+        String[] rs = strArr[1].split("</message>");
+        if (rs!=null && rs.length>1) {
+            return rs[0];
+        }
+        return "";
+    }
     /**
      * 同步消息 sync the messages
      *
