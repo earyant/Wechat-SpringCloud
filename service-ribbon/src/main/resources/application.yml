@@ -1,0 +1,12 @@
+eureka:
+    instance:
+      prefer-ip-address: true
+    client:
+         serviceUrl:
+           defaultZone: http://localhost:8761/eureka/
+#           defaultZone: http://peer1:8761/eureka/  高可用的eureka集群的域名
+server:
+    port: 8764
+spring:
+    application:
+      name: service-ribbon
