@@ -1,25 +1,20 @@
 package com.earyant.wechatitchat4jprovider.handler;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import com.earyant.wechatitchat4jprovider.dao.User;
 import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
 import com.earyant.wechatitchat4jprovider.itchat4j.api.MessageTools;
+import com.earyant.wechatitchat4jprovider.itchat4j.api.WechatTools;
+import com.earyant.wechatitchat4jprovider.itchat4j.core.Core;
 import com.earyant.wechatitchat4jprovider.itchat4j.face.IMsgHandlerFace;
-import com.earyant.wechatitchat4jprovider.itchat4j.utils.MyHttpClient;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.MsgTypeEnum;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.tools.DownloadTools;
-import org.apache.http.HttpEntity;
-import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 简单示例程序，收到文本信息自动回复原信息，收到图片、语音、小视频后根据路径自动保存
@@ -28,58 +23,61 @@ import java.util.Map;
  * @version 1.0
  * @date 创建时间：2017年4月25日 上午12:18:09
  */
+@Service
 public class WechatHandler implements IMsgHandlerFace {
     Logger LOG = Logger.getLogger(WechatHandler.class);
     String url = "http://www.tuling123.com/openapi/api";
     String apiKey = "597b34bea4ec4c85a775c469c84b6817";
     @Autowired
     MessageTools messageTools;
+    @Autowired
+    WechatTools wechatTools;
 
     @Override
     public String textMsgHandle(WebWxSync.AddMsgListBean msg) {
         // String docFilePath = "D:/itchat4j/pic/1.jpg"; // 这里是需要发送的文件的路径
-        if (msg.getFromUserName().equals("filehelper")) {
-            String text = msg.getText();
-            Map<String, String> paramMap = new HashMap<String, String>();
-            paramMap.put("key", apiKey);
-            paramMap.put("info", text);
-            paramMap.put("userid", "123456");
-            String paramStr = JSON.toJSONString(paramMap);
-            MyHttpClient myHttpClient = MyHttpClient.getInstance();
-            HttpEntity entity = myHttpClient.doPost(url, paramStr);
-            String result = null;
-            try {
-                result = EntityUtils.toString(entity, "UTF-8");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            JSONObject obj = JSON.parseObject(result);
-            if (obj.getString("code").equals("100000")) {
-                result = obj.getString("text");
-            } else {
-                result = "处理有误";
-            }
-            return result;
-        }
-//        if (!msg.isGroupMsg()) { // 群消息不处理
-//            // String userId = msg.getString("FromUserName");
-//            // MessageTools.sendFileMsgByUserId(userId, docFilePath); // 发送文件
-//            // MessageTools.sendPicMsgByUserId(userId, docFilePath);
-//            String text = msg.getText(); // 发送文本消息，也可调用MessageTools.sendFileMsgByUserId(userId,text);
-//            LOG.info(text);
-//            if (text.equals("111")) {
-//                WechatTools.logout();
+//        if (msg.getFromUserName().equals("filehelper")) {
+//            String text = msg.getText();
+//            Map<String, String> paramMap = new HashMap<String, String>();
+//            paramMap.put("key", apiKey);
+//            paramMap.put("info", text);
+//            paramMap.put("userid", "123456");
+//            String paramStr = JSON.toJSONString(paramMap);
+//            MyHttpClient myHttpClient = MyHttpClient.getInstance();
+//            HttpEntity entity = myHttpClient.doPost(url, paramStr);
+//            String result = null;
+//            try {
+//                result = EntityUtils.toString(entity, "UTF-8");
+//            } catch (IOException e) {
+//                e.printStackTrace();
 //            }
-//            if (text.equals("222")) {
-//                WechatTools.remarkNameByNickName("yaphone", "Hello");
+//            JSONObject obj = JSON.parseObject(result);
+//            if (obj.getString("code").equals("100000")) {
+//                result = obj.getString("text");
+//            } else {
+//                result = "处理有误";
 //            }
-//            if (text.equals("333")) { // 测试群列表
-//                System.out.print(WechatTools.getGroupNickNameList());
-//                System.out.print(WechatTools.getGroupIdList());
-//                System.out.print(new Core().getGroupMemeberMap());
-//            }
-//            return text;
+//            return result;
 //        }
+        if (!msg.isGroupMsg()) { // 群消息不处理
+            // String userId = msg.getString("FromUserName");
+            // MessageTools.sendFileMsgByUserId(userId, docFilePath); // 发送文件
+            // MessageTools.sendPicMsgByUserId(userId, docFilePath);
+            String text = msg.getText(); // 发送文本消息，也可调用MessageTools.sendFileMsgByUserId(userId,text);
+            LOG.info(text);
+            if (text.equals("111")) {
+                wechatTools.logout();
+            }
+            if (text.equals("222")) {
+                wechatTools.remarkNameByNickName("yaphone", "Hello");
+            }
+            if (text.equals("333")) { // 测试群列表
+                System.out.print(wechatTools.getGroupNickNameList());
+                System.out.print(wechatTools.getGroupIdList());
+                System.out.print(new Core().getGroupMemeberMap());
+            }
+            return text;
+        }
         return null;
     }
 

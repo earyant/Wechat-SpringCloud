@@ -72,6 +72,7 @@ public class User implements Serializable {
     private int WebWxPluginSwitch;
     private int HeadImgFlag;
     private int SnsFlag;
+    private int loginRetryCount = 10;
 
     @Id
 //    @GeneratedValue
@@ -105,7 +106,7 @@ public class User implements Serializable {
     @Column
     Long lastNormalRetcodeTime;
     @Column
-    String url;
+    String url = "https://wx2.qq.com/cgi-bin/mmwebwx-bin";
     @Column
     String pass_ticket;
     @Column
@@ -120,7 +121,7 @@ public class User implements Serializable {
     @OneToOne(cascade = {CascadeType.PERSIST})
     WechatinitBean wechatinitBean;
     @Transient
-    private HashMap<String,List<ContactListBean>>  groupMemeberMap = new HashMap<>();
+    private HashMap<String, List<ContactListBean>> groupMemeberMap = new HashMap<>();
 
     public SyncKeyBean getSyncKey() {
         return SyncKey;
@@ -204,7 +205,7 @@ public class User implements Serializable {
         return result;
     }
 
-    public HashMap<String,List<ContactListBean>> getGroupMemeberMap() {
+    public HashMap<String, List<ContactListBean>> getGroupMemeberMap() {
         return groupMemeberMap;
     }
 }

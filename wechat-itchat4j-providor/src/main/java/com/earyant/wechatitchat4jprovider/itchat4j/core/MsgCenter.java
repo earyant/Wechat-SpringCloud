@@ -2,10 +2,13 @@ package com.earyant.wechatitchat4jprovider.itchat4j.core;
 
 import com.alibaba.fastjson.JSONObject;
 import com.earyant.wechatitchat4jprovider.dao.GroupName;
+import com.earyant.wechatitchat4jprovider.dao.ReplyConfig;
 import com.earyant.wechatitchat4jprovider.dao.User;
+import com.earyant.wechatitchat4jprovider.dao.bean.ContactListBean;
+import com.earyant.wechatitchat4jprovider.dao.repository.ContactListBeanRepository;
 import com.earyant.wechatitchat4jprovider.dao.repository.GroupNameRepository;
+import com.earyant.wechatitchat4jprovider.dao.repository.ReplyConfigRepository;
 import com.earyant.wechatitchat4jprovider.dao.wxsync.WebWxSync;
-import com.earyant.wechatitchat4jprovider.handler.WechatHandler;
 import com.earyant.wechatitchat4jprovider.itchat4j.api.MessageTools;
 import com.earyant.wechatitchat4jprovider.itchat4j.face.IMsgHandlerFace;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.MsgCodeEnum;
@@ -36,6 +39,13 @@ public class MsgCenter {
 
     @Autowired
     MessageTools messageTools;
+    @Autowired
+    ReplyConfigRepository replyConfigRepository;
+    @Autowired
+    IMsgHandlerFace msgHandler;
+    @Autowired
+    ContactListBeanRepository contactListBeanRepository;
+
     /**
      * 接收消息，放入队列
      *
@@ -56,7 +66,6 @@ public class MsgCenter {
                     if (finalM.getFromUserName().contains("@@")
                             && !groupName.getIds().contains(finalM.getFromUserName())
                             ) {
-//                        core.getGroupIdList().add((finalM.getFromUserName()));
                         GroupName groupName1 = new GroupName();
                         groupName1.setId(core.getId());
                         groupName1.setIds(finalM.getFromUserName());
@@ -69,7 +78,6 @@ public class MsgCenter {
                         groupNameRepository.save(groupName1);
                     }
                 });
-
                 // 群消息与普通消息不同的是在其消息体（Content）中会包含发送者id及":<br/>"消息，这里需要处理一下，去掉多余信息，只保留消息内容
                 if (m.getContent().contains("<br/>")) {
                     String content = m.getContent().substring(m.getContent().indexOf("<br/>") + 5);
@@ -120,11 +128,13 @@ public class MsgCenter {
             } else if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_SYS.getCode())) {// 系统消息
                 m.setType(MsgTypeEnum.SYS.getType());
             } else if (m.getMsgType() == (MsgCodeEnum.MSGTYPE_RECALLED.getCode())) { // 撤回消息
-
+                m.setType(MsgTypeEnum.RECALL.getType());
             } else {
                 LOG.info("Useless msg");
             }
-            LOG.info("accept a message  " + msgList.get(0).getContent() + " ,from : " + m.getFromUserName());
+            ContactListBean contact = contactListBeanRepository.findOneByUserName(m.getFromUserName());
+            ContactListBean toUser = contactListBeanRepository.findOneByUserName(m.getToUserName());
+            LOG.info("收到来自  " + (contact == null ? m.getFromUserName() : (contact.getRemarkName() == null || "".equals(contact.getRemarkName())) ? contact.getNickName() : contact.getRemarkName()) + "To " + (toUser == null ? m.getToUserName() : (toUser.getRemarkName() == null || "".equals(toUser.getRemarkName())) ? toUser.getNickName() : toUser.getRemarkName()) + "  的消息: " + msgList.get(0).getContent());
         });
         handleMsg(msgList, core);
         return msgList;
@@ -137,40 +147,63 @@ public class MsgCenter {
      * @date 2017年5月14日 上午10:52:34
      */
     public void handleMsg(List<WebWxSync.AddMsgListBean> msgListBeans, User core) {
-        IMsgHandlerFace msgHandler = new WechatHandler();
+        ReplyConfig replyConfig = replyConfigRepository.findOne(core.getWechatId());
+//        IMsgHandlerFace msgHandler = new WechatHandler();
         if (msgListBeans.size() > 0 && msgListBeans.get(0).getContent() != null) {
             if (msgListBeans.get(0).getContent().length() > 0) {
                 WebWxSync.AddMsgListBean msg = msgListBeans.get(0);
+                LOG.debug("replyConfig.getReplyType()::   " + replyConfig.getReplyType());
                 if (msg.getType() != null) {
                     try {
-                        if (msg.isGroupMsg()) {
+                        if ((replyConfig.getReplyType() & 1023) != 512) {
                             return;
                         }
                         if (msg.getType().equals(MsgTypeEnum.TEXT.getType())) {
                             String result = msgHandler.textMsgHandle(msg);
-                            if (!StringUtils.isEmail(result)) {
-                                messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            if ((replyConfig.getReplyType() & 1023) == 1) {
+                                if (!StringUtils.isEmail(result)) {
+                                    messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                                }
                             }
                         } else if (msg.getType().equals(MsgTypeEnum.PIC.getType())) {
                             String result = msgHandler.picMsgHandle(msg);
-//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            if ((replyConfig.getReplyType() & 1023) == 4) {
+                                messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            }
                         } else if (msg.getType().equals(MsgTypeEnum.VOICE.getType())) {
                             String result = msgHandler.voiceMsgHandle(msg);
-//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            if ((replyConfig.getReplyType() & 1023) == 2) {
+                                messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            }
                         } else if (msg.getType().equals(MsgTypeEnum.VIEDO.getType())) {
                             String result = msgHandler.viedoMsgHandle(msg);
-//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            if ((replyConfig.getReplyType() & 1023) == 16) {
+                                messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            }
+                        } else if (msg.getType().equals(MsgTypeEnum.RECALL.getType())) {
+                            if ((replyConfig.getReplyType() & 1023) == 8) {
+                                messageTools.sendMsgById("撤回消息是" + msg.getContent(), msgListBeans.get(0).getFromUserName(), core);
+                            }
                         } else if (msg.getType().equals(MsgTypeEnum.NAMECARD.getType())) {
                             String result = msgHandler.nameCardMsgHandle(msg);
-//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            if ((replyConfig.getReplyType() & 1023) == 32) {
+                                messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            }
                         } else if (msg.getType().equals(MsgTypeEnum.SYS.getType())) { // 系统消息
                             msgHandler.sysMsgHandle(msg);
+                            if ((replyConfig.getReplyType() & 1023) == 64) {
+
+                            }
                         } else if (msg.getType().equals(MsgTypeEnum.VERIFYMSG.getType())) { // 确认添加好友消息
                             String result = msgHandler.verifyAddFriendMsgHandle(msg, core);
-//                            messageTools.sendMsgById(result,msgListBeans.get(0).getRecommendInfo().getUserName(), core);
+                            if ((replyConfig.getReplyType() & 1023) == 128) {
+                                messageTools.sendMsgById(result, msgListBeans.get(0).getRecommendInfo().getUserName(), core);
+                            }
                         } else if (msg.getType().equals(MsgTypeEnum.MEDIA.getType())) { // 多媒体消息
                             String result = msgHandler.mediaMsgHandle(msg);
-//                            messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            if ((replyConfig.getReplyType() & 1023) == 256) {
+                                messageTools.sendMsgById(result, msgListBeans.get(0).getFromUserName(), core);
+                            }
                         }
                     } catch (Exception e) {
                         e.printStackTrace();

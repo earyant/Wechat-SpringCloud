@@ -15,5 +15,5 @@ spring:
         port: 27017 # Mongo server port.
         repositories:
           enabled: true # Enable Mongo repositories.
-        uri: mongodb://localhost/wechat # Mongo database URI. When set, host and port are ignored.
+#        uri: mongodb://localhost/wechat # Mongo database URI. When set, host and port are ignored.
   #      username:  # Login user of the mongo server.

@@ -82,13 +82,17 @@ public class MsgDispatcherImpl implements MsgDisPatcherService {
                 return restTemplate.postForObject("http://WECHAT-ITCHAT-PROVIDER/getQrImg", map, String.class, map);
             } else {
                 try {
-//                    logger.info("content::  " + content);
                     Pattern p = Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}");
                     Matcher m = p.matcher(content);
                     if (m.find()) {
-//                        logger.info("找到了：：：" + m.group());
                         if (eventDisPatcherService.getContentByDate(newmsg, m.group(0)) != null) ;
                         return eventDisPatcherService.getContentByDate(newmsg, m.group(0));
+                    }
+                     p =Pattern.compile("开启((聊天)*|(语音)*|(图片)*)回复");
+                     m = p.matcher(content);
+                    if (m.find()){
+                        map.put("Content",m.group());
+                        return restTemplate.postForObject("http://WECHAT-ITCHAT-PROVIDER/chat/setBackUp", map, String.class, map);
                     }
                 } catch (Exception e) {
 //                    e.printStackTrace();

@@ -11,4 +11,6 @@ public interface ChatService {
     String chat(Map<String, String> map, String path);
 
     String login(HashMap<String, String> map);
+
+    String setBackUp(HashMap<String, String> map);
 }

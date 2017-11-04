@@ -2,8 +2,7 @@ package com.earyant.wechatitchat4jprovider.dao;
 
 import lombok.Data;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 /**
  * Created by earyant on 2017 : 08 : 2017/8/6 : 21:59 : .
@@ -14,6 +13,11 @@ import javax.persistence.Id;
 public class GroupName {
 
     @Id
+    @GeneratedValue
+    Long groupNameId;
+    @PrimaryKeyJoinColumn
+//    @OneToOne
+//    User user;
     String id;
     String names;
     String ids;

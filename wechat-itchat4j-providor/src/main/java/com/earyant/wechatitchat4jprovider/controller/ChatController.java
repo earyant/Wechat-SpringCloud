@@ -34,6 +34,10 @@ public class ChatController {
         String path = request.getServletContext().getRealPath("") + "loginQrImg";
         return chatService.chat(map, path);
     }
+    @PostMapping(value = "/chat/setBackUp" )
+    String setBackUp(HttpServletRequest request, String userId, @RequestBody HashMap<String, String> map) {
+        return chatService.setBackUp(map);
+    }
 
     @PostMapping(value = "/login" )
     String login(HttpServletRequest request, String userId, @RequestBody HashMap<String, String> map) {

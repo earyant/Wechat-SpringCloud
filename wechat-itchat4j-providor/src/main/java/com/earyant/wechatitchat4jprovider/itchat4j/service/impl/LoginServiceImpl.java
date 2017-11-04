@@ -25,7 +25,7 @@ import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.parameters.Status
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.enums.parameters.UUIDParaEnum;
 import com.earyant.wechatitchat4jprovider.itchat4j.utils.tools.CommonTools;
 import com.earyant.wechatitchat4jprovider.utils.JSONUtils;
-import com.earyant.wechatitchat4jprovider.utils.JedisUtil;
+import com.earyant.wechatitchat4jprovider.utils.StringUtils;
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
 import org.apache.http.message.BasicNameValuePair;
@@ -46,6 +46,9 @@ import java.io.UnsupportedEncodingException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
 /**
@@ -90,6 +93,8 @@ public class LoginServiceImpl implements ILoginService {
     @Autowired
     MsgCenter msgCenter;
 
+    ExecutorService executorService = Executors.newFixedThreadPool(10);
+
     @Override
     public boolean login(User user) {
         boolean isLogin = false;
@@ -112,12 +117,13 @@ public class LoginServiceImpl implements ILoginService {
                 user = processLoginInfo(result, user); // 处理结果
                 isLogin = true;
                 user.setAlive(isLogin);
-                JedisUtil je = JedisUtil.getRu();
-                je.lpush("user", JSON.toJSONString(user));
+                stringRedisTemplate.opsForValue().set("user" + user.getWechatId(), JSON.toJSONString(user));
                 System.out.println("login success！！！！");
-            }
-            if (ResultEnum.WAIT_CONFIRM.getCode().equals(status)) {
+            } else if (ResultEnum.WAIT_CONFIRM.getCode().equals(status)) {
                 LOG.info("please click Login Button");
+            } else {
+//                user.setLoginRetryCount(user.getLoginRetryCount() - 1);
+//                JedisUtil je = JedisUtil.getRu();
             }
         } catch (Exception e) {
             LOG.error("login error！", e);
@@ -133,16 +139,21 @@ public class LoginServiceImpl implements ILoginService {
     @Override
     public String getUuid(String wechatId) {
         User user = new User();
-        // 组装参数和URL
-        List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
-        params.add(new BasicNameValuePair(UUIDParaEnum.APP_ID.para(), UUIDParaEnum.APP_ID.value()));
-        params.add(new BasicNameValuePair(UUIDParaEnum.FUN.para(), UUIDParaEnum.FUN.value()));
-        params.add(new BasicNameValuePair(UUIDParaEnum.LANG.para(), UUIDParaEnum.LANG.value()));
-        params.add(new BasicNameValuePair(UUIDParaEnum._.para(), String.valueOf(System.currentTimeMillis())));
-        MyHttpClient myHttpClient = MyHttpClient.getInstance();
-        HttpEntity entity = myHttpClient.doGet(URLEnum.UUID_URL.getUrl(), params, true, null);
         try {
-            String result = EntityUtils.toString(entity);
+            String result = stringRedisTemplate.opsForValue().get("uuid" + wechatId);
+            if (StringUtils.isEmpty(result)) {
+                // 组装参数和URL
+                List<BasicNameValuePair> params = new ArrayList<BasicNameValuePair>();
+                params.add(new BasicNameValuePair(UUIDParaEnum.APP_ID.para(), UUIDParaEnum.APP_ID.value()));
+                params.add(new BasicNameValuePair(UUIDParaEnum.FUN.para(), UUIDParaEnum.FUN.value()));
+                params.add(new BasicNameValuePair(UUIDParaEnum.LANG.para(), UUIDParaEnum.LANG.value()));
+                params.add(new BasicNameValuePair(UUIDParaEnum._.para(), String.valueOf(System.currentTimeMillis())));
+                MyHttpClient myHttpClient = MyHttpClient.getInstance();
+                HttpEntity entity = myHttpClient.doGet(URLEnum.UUID_URL.getUrl(), params, true, null);
+                result = EntityUtils.toString(entity);
+                stringRedisTemplate.opsForValue().set("uuid" + wechatId, result);
+                stringRedisTemplate.expire("uuid" + wechatId, 10, TimeUnit.SECONDS);
+            }
             System.out.println("get qr result   " + result);
             String regEx = "window.QRLogin.code = (\\d+); window.QRLogin.uuid = \"(\\S+?)\";";
             Matcher matcher = CommonTools.getMatcher(regEx, result);
@@ -154,8 +165,7 @@ public class LoginServiceImpl implements ILoginService {
                     user.setCreateTime(LocalDateTime.now().toString());
                     user.setId(user.getUuid());
                     userRepository.save(user);
-                    JedisUtil je = JedisUtil.getRu();
-                    je.lpush("user", JSON.toJSONString(user));
+                    stringRedisTemplate.opsForValue().set("user"+wechatId, JSON.toJSONString(user));
                 }
             }
         } catch (Exception e) {
@@ -183,6 +193,12 @@ public class LoginServiceImpl implements ILoginService {
         return qrPath;
     }
 
+    /**
+     * 初始化
+     *
+     * @param wechatId
+     * @return
+     */
     @Override
     public boolean webWxInit(String wechatId) {
         User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
@@ -199,16 +215,15 @@ public class LoginServiceImpl implements ILoginService {
         HttpEntity entity = myHttpClient.doPost(url, JSON.toJSONString(paramMap));
         try {
             String result = EntityUtils.toString(entity, Consts.UTF_8);
-//            LOG.info("webWxInit: result:   " + result);
             WechatinitBean jsonRootBean = JSONUtils.parser(result, WechatinitBean.class);
-            //保存获取到的user信息
-//            WxInitBean wxInitBean = JSONUtils.parser(result, WxInitBean.class);
+            //1、 保存获取到的user信息
             User user = jsonRootBean.getUser();
             String userId = core.getUuid();
             user.setId(userId);
             core.setInviteStartCount(jsonRootBean.getInviteStartCount());
             userRepository.save(user);
-            //联系人信息。
+
+            //2、 获取联系人信息并保存。
             List<ContactListBean> contactListBean = jsonRootBean.getContactList();
 //          同步信息的key
             SyncKeyBean syncKeyBean = jsonRootBean.getSyncKey();
@@ -241,9 +256,9 @@ public class LoginServiceImpl implements ILoginService {
                     });
                     contactListBeanRepository.save(contactListBean1.getMemberList());
                 }
-
             });
             contactListBeanRepository.save(contactListBean);
+            redisTemplate.opsForList().leftPushAll("contact"+user.getWechatId(),contactListBean.toString());
 
             List<ListBean> syncArray = syncKeyBean.getList();
             StringBuilder sb = new StringBuilder();
@@ -261,7 +276,6 @@ public class LoginServiceImpl implements ILoginService {
 //            core.setUserSelf(jsonRootBean.getUser());
 
             String chatSet = jsonRootBean.getChatSet();
-            System.out.println("chatSet ::   " + chatSet);
             String[] chatSetArray = chatSet.split(",");
             List<GroupName> groupNames = new ArrayList<>();
             for (int i = 0; i < chatSetArray.length; i++) {
@@ -270,8 +284,8 @@ public class LoginServiceImpl implements ILoginService {
                     GroupName groupName = new GroupName();
                     groupName.setIds(chatSetArray[i]);
                     groupName.setId(userId);
+//                    groupName.setUser(core);
                     groupNames.add(groupName);
-
                 }
             }
             List<GroupName> groupNameList = new ArrayList<>();
@@ -300,13 +314,17 @@ public class LoginServiceImpl implements ILoginService {
         return true;
     }
 
+    /**
+     * 开启微信状态通知，手机端提示网页端已经登陆。
+     *
+     * @param wechatId 用户id
+     */
     @Override
     public void wxStatusNotify(String wechatId) {
         User u = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
         // 组装请求URL和参数
         String url = String.format(URLEnum.STATUS_NOTIFY_URL.getUrl(),
                 u.getPass_ticket());
-
         Map<String, Object> paramMap = u.getParamMap();
         paramMap.put(StatusNotifyParaEnum.CODE.para(), StatusNotifyParaEnum.CODE.value());
         paramMap.put(StatusNotifyParaEnum.FROM_USERNAME.para(), u.getUserName());
@@ -316,18 +334,16 @@ public class LoginServiceImpl implements ILoginService {
 
         try {
             String entity = restTemplate.postForObject(url, paramMap, String.class, paramMap);
-
         } catch (Exception e) {
             LOG.error("微信状态通知接口失败！", e);
         }
-
     }
 
     @Override
     public void startReceiving(String wechatId) {
         User core = userRepository.findTop1ByWechatIdOrderByCreateTimeDesc(wechatId);
         core.setAlive(true);
-        new Thread(new Runnable() {
+        Thread thread = new Thread(new Runnable() {
             int retryCount = 0;
 
             @Override
@@ -391,7 +407,6 @@ public class LoginServiceImpl implements ILoginService {
                                         LOG.info(e.getMessage());
                                     }
                                 }
-
                             }
                         } else {
                             WebWxSync obj = webWxSync(core);
@@ -416,10 +431,9 @@ public class LoginServiceImpl implements ILoginService {
                     }
                 }
             }
-        }).start();
-
+        });
+        executorService.submit(thread);
     }
-
 
     @Override
     public void webWxGetContact(String wechatId) {
@@ -449,6 +463,7 @@ public class LoginServiceImpl implements ILoginService {
                 }
                 member.setId(id);
                 contactListBeanRepository.save(member);
+                redisTemplate.opsForList().leftPush("contact"+core.getWechatId(),member);
             });
 
             core.setMemberCount(getContctBean.getMemberCount());
@@ -478,6 +493,7 @@ public class LoginServiceImpl implements ILoginService {
                 });
                 System.out.println("错误的数据： " + contactListBean.toString());
                 contactListBeanRepository.save(contactListBean);
+                redisTemplate.opsForList().leftPushAll("contact"+core.getWechatId(),contactListBean);
             }
 
             core.setMemberCount(contactListBean.size());
@@ -496,10 +512,7 @@ public class LoginServiceImpl implements ILoginService {
                             groupNameRepository.save(groupName);
                         }
                     });
-//                } else if (o.getUserName().equals(core.getUserSelf().getUsername())) { // 自己
-//                    core.getContactlist().remove(o);
                 } else { // 普通联系人
-//                    core.getContactlist().add(o);
                     String id = o.getPYInitial() + o.getPYQuanPin();
                     if (id == null || id == "") {
                         id = o.getUserName();
@@ -507,6 +520,8 @@ public class LoginServiceImpl implements ILoginService {
                     o.setId(id);
                 }
                 contactListBeanRepository.save(o);
+                redisTemplate.opsForList().leftPushAll("contact"+core.getWechatId(),contactListBean);
+
             }
             return;
         } catch (Exception e) {
@@ -537,14 +552,14 @@ public class LoginServiceImpl implements ILoginService {
         try {
             String text = EntityUtils.toString(entity, Consts.UTF_8);
             WxBatchGetContact wxBatchGetContact = JSONUtils.parser(text, WxBatchGetContact.class);
-//TODO WebWxBatchGetContact  没有数据
-            LOG.info("WebWxBatchGetContact:::   " + text);
+//            LOG.info("WebWxBatchGetContact:::   " + text);
 //            JSONObject obj = JSON.parseObject(text);
             List<ContactListBean> contactList = wxBatchGetContact.getContactList();
             contactList.forEach(contactListBean -> {
                 contactListBean.setId(contactListBean.getPYInitial() + contactListBean.getPYQuanPin());
             });
             contactListBeanRepository.save(contactList);
+            redisTemplate.opsForList().leftPushAll("contact"+core.getWechatId(),contactList);
             for (int i = 0; i < contactList.size(); i++) { // 群好友
                 if (contactList.get(i).getUserName().indexOf("@@") > -1) { // 群
                     core.getGroupNickNameList().add(contactList.get(i).getNickName()); // 更新群昵称列表
@@ -624,9 +639,8 @@ public class LoginServiceImpl implements ILoginService {
             //add by 默非默 2017-08-01 22:28:09
             //如果登录被禁止时，则登录返回的message内容不为空，下面代码则判断登录内容是否为空，不为空则退出程序
             String msg = getLoginMessage(text);
-            if (!"".equals(msg)){
+            if (!"".equals(msg)) {
                 LOG.info(msg);
-//                System.exit(0);
                 return null;
             }
             Document doc = CommonTools.xmlParser(text);
@@ -653,17 +667,19 @@ public class LoginServiceImpl implements ILoginService {
 
     /**
      * 解析登录返回的消息，如果成功登录，则message为空
+     *
      * @param result
      * @return
      */
-    public String getLoginMessage(String result){
+    public String getLoginMessage(String result) {
         String[] strArr = result.split("<message>");
         String[] rs = strArr[1].split("</message>");
-        if (rs!=null && rs.length>1) {
+        if (rs != null && rs.length > 1) {
             return rs[0];
         }
         return "";
     }
+
     /**
      * 同步消息 sync the messages
      *
