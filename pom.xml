@@ -26,6 +26,7 @@
         <module>wechat-config</module>
         <module>wechat-itchat4j-providor</module>
         <module>wechat_provider</module>
+        <module>turbine</module>
     </modules>
 
 </project>
